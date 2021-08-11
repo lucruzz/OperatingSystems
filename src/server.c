@@ -66,11 +66,9 @@ int main(int argc, char *argv[]){
 
     int run = 1;
     int serverSocket = serverConection(argv);
-    int consocket;
+    int consocket = connectionSocket(serverSocket);
 
     while(run != 5){
-
-        consocket = connectionSocket(serverSocket);
 
         // receber ou enviar dados
         int commandReceived = recvInt(consocket);
