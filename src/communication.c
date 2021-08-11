@@ -1,7 +1,7 @@
 /*======================================================*/
 /* Lucas Cruz                                           */
 /* Engenharia de Computação - CEFET/RJ - UneD Petrópolis*/
-/* Sistemas Operacionais				                        */
+/* Sistemas Operacionais                                */
 /* Trabalho de implementação de um Servidor Proxy       */
 /*======================================================*/
 #include <stdio.h>
@@ -38,7 +38,7 @@ void sendString(char * string, int socket ){
 }
 
 char * recvString(int socket){
-		char * buffer = (char *) calloc(MAXRCVLEN, sizeof(char));
-		int len = recv(socket, buffer, MAXRCVLEN, 0);
-		return buffer;
+    char * buffer = (char *) calloc(MAXRCVLEN, sizeof(char));
+    int len = recv(socket, buffer, MAXRCVLEN, 0);
+    return buffer;
 }
