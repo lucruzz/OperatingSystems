@@ -11,7 +11,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 
-#include "biblioteca.h"
+#include "../include/communication.h"
 
 void sendInt( int intNumber, int socket ){
     send(socket, &intNumber, sizeof(int), 0);
