@@ -1,7 +1,7 @@
 /*======================================================*/
 /* Lucas Cruz                                           */
 /* Engenharia de Computação - CEFET/RJ - UneD Petrópolis*/
-/* Sistemas Operacionais				                        */
+/* Sistemas Operacionais                                */
 /* Trabalho de implementação de um Servidor Proxy       */
 /*======================================================*/
 #include <time.h>
@@ -16,6 +16,11 @@
 #include <errno.h>
 
 #include "../include/communication.h"
+
+void executeCommand(){
+
+}
+
 
 int serverConection(char * argv[]){
 
@@ -59,18 +64,21 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
     }
 
+    int run = 1;
     int serverSocket = serverConection(argv);
+    int consocket;
 
-    while(consocket){
+    while(run != 5){
 
-        int consocket = connectionSocket(serverSocket);
+        consocket = connectionSocket(serverSocket);
 
         // receber ou enviar dados
+        int commandReceived = recvInt(consocket);
+        printf("[COMMAND] %d\n", commandReceived);
+        run = commandReceived;
 
-        close(consocket);
-        consocket = accept(serverSocket, (struct sockaddr *)&dest, &socksize);
     }
-
+    close(consocket);
     close(serverSocket);
     return EXIT_SUCCESS;
 }
