@@ -1,3 +1,9 @@
+/*======================================================*/
+/* Lucas Cruz                                           */
+/* Engenharia de Computação - CEFET/RJ - UneD Petrópolis*/
+/* Sistemas Operacionais				                        */
+/* Trabalho de implementação de um Servidor Proxy       */
+/*======================================================*/
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,8 +17,7 @@
 
 #include "../include/communication.h"
 
-int main(int argc, char *argv[])
-{
+int serverConection(){
 
     if( argc != 2 ){
         printf("USAGE: server port_number\n");
@@ -28,10 +33,10 @@ int main(int argc, char *argv[])
     int mysocket;            /* socket used to listen for incoming connections */
     socklen_t socksize = sizeof(struct sockaddr_in);
 
-    memset(&serv, 0, sizeof(serv));           /* zero the struct before filling the fields */
-    serv.sin_family = AF_INET;                /* set the type of connection to TCP/IP */
-    serv.sin_addr.s_addr = htonl(INADDR_ANY); /* set our address to any interface */
-    serv.sin_port = htons( atoi( argv[ 1 ] ) );           /* set the server port number */
+    memset(&serv, 0, sizeof(serv));             /* zero the struct before filling the fields */
+    serv.sin_family = AF_INET;                  /* set the type of connection to TCP/IP */
+    serv.sin_addr.s_addr = htonl(INADDR_ANY);   /* set our address to any interface */
+    serv.sin_port = htons( atoi( argv[ 1 ] ) ); /* set the server port number */
 
     mysocket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -50,36 +55,7 @@ int main(int argc, char *argv[])
     {
         printf("Incoming connection from %s - sending welcome\n", inet_ntoa(dest.sin_addr));
 
-        //int randomMessage = rand() % 5;
-
-        // Envio de string para o cliente
-        // char * stringMsg = (char *) calloc(MAXRCVLEN, sizeof(char));
-        // strcpy(stringMsg, "oi");
-        // sendString(stringMsg, consocket);
-
-        // Envio de int para o cliente
-        // int intNumber = 5;
-        // sendInt(intNumber, consocket);
-        // printf(">> %d\n", intNumber);
-
-        // Envio de double para o cliente
-        // double doubleNumber = 5.5;
-        // sendDouble(doubleNumber, consocket);
-        // printf(">> %.1f\n", doubleNumber);
-
-        // Recebimento de string do cliente
-        // char * string = recvString(consocket);
-        // printf(">> %s\n", string);
-
-        // Recebimento de inteiro do cliente
-     	  // int num = 0;
-     	  // num = recvInt(consocket);
-     	  // printf(">> %d\n", num);
-
-     	  // Recebimento de double do cliente
-     	  double doubleNumber = 0.0;
-     	  doubleNumber = recvDouble(consocket);
-     	  printf(">> %.1f\n", doubleNumber);
+        // receber ou enviar dados
 
         close(consocket);
         consocket = accept(mysocket, (struct sockaddr *)&dest, &socksize);
@@ -87,4 +63,10 @@ int main(int argc, char *argv[])
 
     close(mysocket);
     return EXIT_SUCCESS;
+}
+
+
+int main(int argc, char *argv[]){
+
+
 }

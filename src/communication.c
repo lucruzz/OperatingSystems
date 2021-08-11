@@ -1,3 +1,9 @@
+/*======================================================*/
+/* Lucas Cruz                                           */
+/* Engenharia de Computação - CEFET/RJ - UneD Petrópolis*/
+/* Sistemas Operacionais				                        */
+/* Trabalho de implementação de um Servidor Proxy       */
+/*======================================================*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

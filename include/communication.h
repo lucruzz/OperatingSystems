@@ -1,3 +1,9 @@
+/*======================================================*/
+/* Lucas Cruz                                           */
+/* Engenharia de Computação - CEFET/RJ - UneD Petrópolis*/
+/* Sistemas Operacionais				                        */
+/* Trabalho de implementação de um Servidor Proxy       */
+/*======================================================*/
 #ifndef __COMMUNICATION_H__
 #define __COMMUNICATION_H__
 
