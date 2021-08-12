@@ -9,6 +9,20 @@
 
 #define MAXRCVLEN 500
 
+#define TRUE 1
+#define FALSE 0
+
+#define SEARCH "search"
+#define LIST "list"
+#define EXIT "exit"
+#define HISTORY "history"
+
+#define SEARCH_ID 1
+#define LIST_ID 2
+#define EXIT_ID 3
+#define HISTORY_ID 4
+#define COMMAND_ID_NOT_FOUND -1
+
 void sendInt( int intNumber, int socket );
 int recvInt( int socket );
 
