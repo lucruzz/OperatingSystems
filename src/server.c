@@ -17,7 +17,33 @@
 
 #include "../include/communication.h"
 
-void executeCommand(){
+void executeCommand(int command_id, int * run, int consocket){
+
+      switch (command_id) {
+
+        case LIST_ID:
+            printf("[LIST COMMAND]\n");
+            break;
+
+        case SEARCH_ID:
+            printf("[SEARCH COMMAND]\n");
+            break;
+
+        case HISTORY_ID:
+            printf("[HISTORY COMMAND]\n");
+            break;
+
+        case COMMAND_ID_NOT_FOUND:
+            printf("[COMMAND NOT FOUND]\n");
+            break;
+
+        case EXIT_ID:
+            printf("[EXIT COMMAND]\n");
+            printf("Server says bye bye!\n");
+            *run = FALSE;
+            break;
+
+      }
 
 }
 
@@ -64,16 +90,19 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
     }
 
-    int run = 1;
+    int run = TRUE;
     int serverSocket = serverConection(argv);
     int consocket = connectionSocket(serverSocket);
 
-    while(run != 5){
+    while(run){
 
-        // receber ou enviar dados
-        int commandReceived = recvInt(consocket);
-        printf("[COMMAND] %d\n", commandReceived);
-        run = commandReceived;
+
+        //Recebe o ID do comando a ser processado
+        int commandReceived_id = 0;
+        commandReceived_id = recvInt(consocket);
+
+        // Executa o comando de acordo com o ID do comando recebido
+        executeCommand(commandReceived_id, &run, consocket);
 
     }
     close(consocket);
