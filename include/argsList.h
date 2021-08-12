@@ -1,11 +1,11 @@
 /*======================================================*/
 /* Lucas Cruz                                           */
 /* Engenharia de Computação - CEFET/RJ - UneD Petrópolis*/
-/* Sistemas Operacionais				                        */
-/* Trabalho de implementação de uma Proxy		            */
+/* Sistemas Operacionais                                */
+/* Trabalho de implementação de uma Proxy               */
 /*======================================================*/
-#ifndef __LIST_H__
-#define __LIST_H__
+#ifndef __ARGSLIST_H__
+#define __ARGSLIST_H__
 
 #define LIST_MAX_LINE_SIZE 200
 

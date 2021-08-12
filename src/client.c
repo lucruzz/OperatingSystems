@@ -1,7 +1,7 @@
 /*======================================================*/
 /* Lucas Cruz                                           */
 /* Engenharia de Computação - CEFET/RJ - UneD Petrópolis*/
-/* Sistemas Operacionais				                        */
+/* Sistemas Operacionais                                */
 /* Trabalho de implementação de um Servidor Proxy       */
 /*======================================================*/
 #include <stdio.h>
@@ -105,45 +105,45 @@ void * readCommand(){
 }
 
 
-int clientConnection(){
+int clientConnection(char *argv[]){
+
+    int mysocket;
+    struct sockaddr_in dest;
+
+    mysocket = socket(AF_INET, SOCK_STREAM, 0);
+
+    memset(&dest, 0, sizeof(dest));               /* zero the struct */
+    dest.sin_family = AF_INET;
+    dest.sin_addr.s_addr = htonl(INADDR_LOOPBACK);/* set destination IP number - localhost, 127.0.0.1*/
+    dest.sin_port = htons(  atoi( argv[ 1 ]) );   /* set destination port number */
+
+    int connectResult = connect(mysocket, (struct sockaddr *)&dest, sizeof(struct sockaddr_in));
+
+    if( connectResult == -1 ){
+        printf("CLIENT ERROR: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    return mysocket;
+}
+
+int main( int argc, char *argv[] ){
 
     if( argc != 2 ){
         printf("USAGE: server port_number\n");
         return EXIT_FAILURE;
     }
 
-    char buffer[MAXRCVLEN + 1]; /* +1 so we can add null terminator */
-    bzero( buffer, MAXRCVLEN + 1 );
-    int len, mysocket;
-    struct sockaddr_in dest;
-
-    mysocket = socket(AF_INET, SOCK_STREAM, 0);
-
-    memset(&dest, 0, sizeof(dest));                /* zero the struct */
-    dest.sin_family = AF_INET;
-    dest.sin_addr.s_addr = htonl(INADDR_LOOPBACK); /* set destination IP number - localhost, 127.0.0.1*/
-    dest.sin_port = htons(  atoi( argv[ 1 ]) );                /* set destination port number */
-
-    int connectResult = connect(mysocket, (struct sockaddr *)&dest, sizeof(struct sockaddr_in));
-
-    if( connectResult == -1 ){
-
-        printf("CLIENT ERROR: %s\n", strerror(errno));
-
-        return EXIT_FAILURE;
-    }
-
-    close(mysocket);
-    return EXIT_SUCCESS;
-}
-
-int main( int argc, char **argv ){
-
     char * command;
     int run = TRUE;
+    int mysocket = clientConnection(argv);
 
     while(run){
+      int n = -2;
+      scanf("%d", &n);
+      sendInt(n, mysocket);
 
+      /*
         command = readCommand();
 
         int command_id = processCommand(command, &run);
@@ -157,6 +157,9 @@ int main( int argc, char **argv ){
                 removeList();
             }
         }
+      */
     }
-    return 0;
+
+    close(mysocket);
+    return EXIT_SUCCESS;
 }
