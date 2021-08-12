@@ -34,11 +34,15 @@ double recvDouble( int socket ){
 }
 
 void sendString(char * string, int socket ){
-    send(socket, string, strlen(string) + 1, 0);
+    int len_str =  strlen(string) + 1; // +1 para o '\0'
+    sendInt(len_str, socket);
+    send(socket, string, sizeof(char)*len_str, 0);
 }
 
 char * recvString(int socket){
-    char * buffer = (char *) calloc(MAXRCVLEN, sizeof(char));
-    int len = recv(socket, buffer, MAXRCVLEN, 0);
-    return buffer;
+    int len_str = 0;
+    len_str = recvInt(socket);
+    char * string = (char *) calloc(len_str, sizeof(char)*len_str);
+    recv(socket, string, len_str, 0);
+    return string;
 }
