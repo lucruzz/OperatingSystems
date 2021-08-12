@@ -20,20 +20,6 @@
 
 #define MAX_LINE_SIZE 500
 
-#define SEARCH "search"
-#define LIST "list"
-#define EXIT "exit"
-#define HISTORY "history"
-
-#define SEARCH_ID 1
-#define LIST_ID 2
-#define EXIT_ID 3
-#define HISTORY_ID 4
-#define COMMAND_ID_NOT_FOUND -1
-
-#define TRUE 1
-#define FALSE 0
-
 void search(){
     puts("> Search");
 }
@@ -45,7 +31,7 @@ void list(){
 void exit_(int * run){
     *run = FALSE;
     removeHistory();
-    puts("Bye bye!");
+    puts("Client says bye bye!");
 }
 
 int determineArguments(char * commandArgs){
@@ -66,7 +52,7 @@ int determineArguments(char * commandArgs){
     return n_arguments;
 }
 
-int processCommand(char * command, int * run){
+int processCommand(char * command, int * run, int mysocket){
 
     char * strings = strtok(command, " ");
 
@@ -75,19 +61,25 @@ int processCommand(char * command, int * run){
     if( !strcmp( strings, SEARCH ) ){
         command_id = SEARCH_ID;
         search();
+
     }else if( !strcmp( strings, LIST ) ){
         command_id = LIST_ID;
         list();
+
     }else if( !strcmp( strings, EXIT ) ){
         command_id = EXIT_ID;
         exit_(&(*run));
+
     }else if( !strcmp( strings, HISTORY ) ){
         command_id = HISTORY_ID;
         printHistory();
+
     }else{
         command_id = COMMAND_ID_NOT_FOUND;
         printf( "Command not found!\n" );
     }
+
+    sendInt(command_id, mysocket);
 
     return command_id;
 }
@@ -139,14 +131,10 @@ int main( int argc, char *argv[] ){
     int mysocket = clientConnection(argv);
 
     while(run){
-      int n = -2;
-      scanf("%d", &n);
-      sendInt(n, mysocket);
 
-      /*
         command = readCommand();
 
-        int command_id = processCommand(command, &run);
+        int command_id = processCommand(command, &run, mysocket);
 
         if( command_id != EXIT_ID && command_id != COMMAND_ID_NOT_FOUND){
 
@@ -157,7 +145,7 @@ int main( int argc, char *argv[] ){
                 removeList();
             }
         }
-      */
+
     }
 
     close(mysocket);
