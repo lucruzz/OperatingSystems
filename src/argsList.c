@@ -7,32 +7,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "../include/argsList.h"
 
-typedef struct List{
-    int n_elements;
-    struct Node *begin;
-    struct Node *end;
-}List;
-
-typedef struct Node{
-    char *argument;
-    struct Node *next;
-}Node;
-
-List *listStructure = NULL;
-Node *newnode = NULL;
-
-void createList(){
-    listStructure = (List *) calloc(1, sizeof(List));
-    // listStructure->begin = NULL;
-    // listStructure->end = NULL;
-    // listStructure->n_elements = 0;
+List * createList(){
+    List * listStructure = (List *) calloc(1, sizeof(List));
+    return listStructure;
 }
 
-void insertArg(char * StringArgument){
+void insertArg(char * StringArgument, List * listStructure){
 
-    newnode = (Node *) calloc(1, sizeof(Node));
+    Node * newnode = (Node *) calloc(1, sizeof(Node));
     newnode->argument = (char *) calloc(LIST_MAX_LINE_SIZE, sizeof(char));
     strcpy(newnode->argument, StringArgument);
     newnode->next = NULL;
@@ -46,7 +31,7 @@ void insertArg(char * StringArgument){
     listStructure->n_elements += 1;
 }
 
-void printList(){
+void printList(List * listStructure){
     Node *aux = listStructure->begin;
     int i = 1;
 
@@ -58,29 +43,20 @@ void printList(){
     printf("[%d] %s\n", i, aux->argument);
 }
 
-void removeList(){
+void removeList(List * listStructure){
 
     Node *aux = listStructure->begin;
     Node *tmp;
 
     while(aux->next != NULL){
-
         tmp = aux;
         aux = aux->next;
         listStructure->begin = aux;
-
-        // tmp->next = NULL;
-        // tmp->argument = NULL;
         free(tmp);
     }
 
-    // listStructure->n_arguments = 0;
-    // listStructure->begin = NULL;
-    // listStructure->end = NULL;
     free(listStructure);
-
-    // aux->argument = NULL;
     free(aux);
-    return;
 
+    return;
 }

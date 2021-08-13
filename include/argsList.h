@@ -9,12 +9,20 @@
 
 #define LIST_MAX_LINE_SIZE 200
 
-typedef struct List List;
-typedef struct Node Node;
+typedef struct List{
+    int n_elements;
+    struct Node *begin;
+    struct Node *end;
+}List;
 
-void createList();
-void insertArg(char * StringArgument);
-void printList();
-void removeList();
+typedef struct Node{
+    char *argument;
+    struct Node *next;
+}Node;
+
+List * createList();
+void insertArg( char * , List * );
+void printList( List * );
+void removeList( List * );
 
 #endif
