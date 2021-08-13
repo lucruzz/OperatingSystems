@@ -28,11 +28,9 @@ List * determineArguments(char * commandArgs){
     commandArgs = strtok(NULL, " ");
 
     while( commandArgs != NULL ){
-
         ++n_arguments;
         insertArg(commandArgs, commandList);
         commandArgs = strtok(NULL, " ");
-
     }
 
     return commandList;
@@ -42,6 +40,7 @@ List * determineArguments(char * commandArgs){
 void search(char *command, int mysocket){
 
     puts("> Search");
+    printf(":::: %s\n", command);
 
     List * commandList = determineArguments(command);
 
@@ -49,15 +48,19 @@ void search(char *command, int mysocket){
 
         int n = commandList->n_elements;
         Node * aux = commandList->begin;
-
+        // Envia o número de argumentos (sites)
         sendInt(n, mysocket);
 
         for( int i = 0; i < n; i++ ){
+            // Envia o argumento (site) para o Servidor
             sendString(aux->argument, mysocket);
             aux = aux->next;
         }
 
         removeList(commandList);
+
+    }else{
+        printf("No arguments to search command!\n");
     }
 }
 
@@ -80,26 +83,29 @@ int processCommand(char * command, int * run, int mysocket){
 
     if( !strcmp( strings, SEARCH ) ){
         command_id = SEARCH_ID;
+        sendInt(command_id, mysocket); // Envia o ID do comando a ser processado
         search(strings, mysocket);
 
     }else if( !strcmp( strings, LIST ) ){
         command_id = LIST_ID;
+        sendInt(command_id, mysocket);
         list();
 
     }else if( !strcmp( strings, EXIT ) ){
         command_id = EXIT_ID;
+        sendInt(command_id, mysocket);
         exit_(&(*run));
 
     }else if( !strcmp( strings, HISTORY ) ){
         command_id = HISTORY_ID;
+        sendInt(command_id, mysocket);
         printHistory();
 
     }else{
         command_id = COMMAND_ID_NOT_FOUND;
+        sendInt(command_id, mysocket);
         printf( "Command not found!\n" );
     }
-
-    sendInt(command_id, mysocket);
 
     return command_id;
 }
@@ -159,9 +165,6 @@ int main( int argc, char *argv[] ){
 
         int command_id = processCommand(command, &run, mysocket);
 
-        // if( command_id != EXIT_ID && command_id != COMMAND_ID_NOT_FOUND){
-        //
-        // }
 
     }
 
