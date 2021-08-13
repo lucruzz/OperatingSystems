@@ -23,10 +23,19 @@ void executeCommand(int command_id, int * run, int consocket){
 
         case LIST_ID:
             printf("[LIST COMMAND]\n");
+
             break;
 
         case SEARCH_ID:
             printf("[SEARCH COMMAND]\n");
+
+            int n = recvInt(consocket);
+            printf("%d\n", n);
+            /*for( int i = 0; i < n; i++ ){
+                char * str = recvString(consocket);
+                printf("%s\n", str);
+            }
+*/
             break;
 
         case HISTORY_ID:
@@ -46,7 +55,6 @@ void executeCommand(int command_id, int * run, int consocket){
       }
 
 }
-
 
 int serverConection(char * argv[]){
 
@@ -96,15 +104,16 @@ int main(int argc, char *argv[]){
 
     while(run){
 
-
         //Recebe o ID do comando a ser processado
         int commandReceived_id = 0;
         commandReceived_id = recvInt(consocket);
+        printf(":::: %d\n", commandReceived_id);
 
         // Executa o comando de acordo com o ID do comando recebido
         executeCommand(commandReceived_id, &run, consocket);
 
     }
+
     close(consocket);
     close(serverSocket);
     return EXIT_SUCCESS;
