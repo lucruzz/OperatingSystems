@@ -20,10 +20,48 @@
 
 #define MAX_LINE_SIZE 500
 
-void search(){
-    puts("> Search");
+List * determineArguments(char * commandArgs){
+
+    int n_arguments = 0;
+    List * commandList = createList();
+
+    commandArgs = strtok(NULL, " ");
+
+    while( commandArgs != NULL ){
+
+        ++n_arguments;
+        insertArg(commandArgs, commandList);
+        commandArgs = strtok(NULL, " ");
+
+    }
+
+    return commandList;
 }
 
+// Busca n sites
+void search(char *command, int mysocket){
+
+    puts("> Search");
+
+    List * commandList = determineArguments(command);
+
+    if (commandList->n_elements){
+
+        int n = commandList->n_elements;
+        Node * aux = commandList->begin;
+
+        sendInt(n, mysocket);
+
+        for( int i = 0; i < n; i++ ){
+            sendString(aux->argument, mysocket);
+            aux = aux->next;
+        }
+
+        removeList(commandList);
+    }
+}
+
+// Lista os sites da proxy
 void list(){
     puts("> List");
 }
@@ -34,24 +72,6 @@ void exit_(int * run){
     puts("Client says bye bye!");
 }
 
-int determineArguments(char * commandArgs){
-
-    int n_arguments = 0;
-    createList();
-
-    commandArgs = strtok(NULL, " ");
-
-    while( commandArgs != NULL ){
-
-        ++n_arguments;
-        insertArg(commandArgs);
-        commandArgs = strtok(NULL, " ");
-
-    }
-
-    return n_arguments;
-}
-
 int processCommand(char * command, int * run, int mysocket){
 
     char * strings = strtok(command, " ");
@@ -60,7 +80,7 @@ int processCommand(char * command, int * run, int mysocket){
 
     if( !strcmp( strings, SEARCH ) ){
         command_id = SEARCH_ID;
-        search();
+        search(strings, mysocket);
 
     }else if( !strcmp( strings, LIST ) ){
         command_id = LIST_ID;
@@ -96,7 +116,6 @@ void * readCommand(){
     return command;
 }
 
-
 int clientConnection(char *argv[]){
 
     int mysocket;
@@ -113,7 +132,7 @@ int clientConnection(char *argv[]){
 
     if( connectResult == -1 ){
         printf("CLIENT ERROR: %s\n", strerror(errno));
-        return EXIT_FAILURE;
+        return -1;
     }
 
     return mysocket;
@@ -130,21 +149,19 @@ int main( int argc, char *argv[] ){
     int run = TRUE;
     int mysocket = clientConnection(argv);
 
+    if(mysocket == -1){
+        return -1;
+    }
+
     while(run){
 
         command = readCommand();
 
         int command_id = processCommand(command, &run, mysocket);
 
-        if( command_id != EXIT_ID && command_id != COMMAND_ID_NOT_FOUND){
-
-            int n_arguments = determineArguments(command);
-
-            if (n_arguments){
-                printList();
-                removeList();
-            }
-        }
+        // if( command_id != EXIT_ID && command_id != COMMAND_ID_NOT_FOUND){
+        //
+        // }
 
     }
 
