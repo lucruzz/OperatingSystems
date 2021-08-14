@@ -40,16 +40,15 @@ List * determineArguments(char * commandArgs){
 void search(char *command, int mysocket){
 
     puts("> Search");
-    printf(":::: %s\n", command);
 
     List * commandList = determineArguments(command);
 
-    if (commandList->n_elements){
+    int n = commandList->n_elements;
+    // Envia o número de argumentos (sites)
+    sendInt(n, mysocket);
 
-        int n = commandList->n_elements;
+    if(n){
         Node * aux = commandList->begin;
-        // Envia o número de argumentos (sites)
-        sendInt(n, mysocket);
 
         for( int i = 0; i < n; i++ ){
             // Envia o argumento (site) para o Servidor

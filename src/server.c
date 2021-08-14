@@ -24,6 +24,7 @@ void executeCommand(int command_id, int * run, int consocket){
         case LIST_ID:
             printf("[LIST COMMAND]\n");
 
+
             break;
 
         case SEARCH_ID:
@@ -32,12 +33,13 @@ void executeCommand(int command_id, int * run, int consocket){
             // Recebe o número de argumentos (sites) a serem processados
             int n = recvInt(consocket);
 
-            for( int i = 0; i < n; i++ ){
-                // Recebe o argumento (site) enviado do cliente
-                char * str = recvString(consocket);
-                printf("%s %ld", str, strlen(str));
+            if(n){
+                for( int i = 0; i < n; i++ ){
+                    // Recebe o argumento (site) enviado do cliente
+                    char * str = recvString(consocket);
+                }
             }
-
+            
             break;
 
         case HISTORY_ID:
