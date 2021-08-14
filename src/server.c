@@ -23,8 +23,6 @@ void executeCommand(int command_id, int * run, int consocket){
 
         case LIST_ID:
             printf("[LIST COMMAND]\n");
-
-
             break;
 
         case SEARCH_ID:
@@ -39,7 +37,7 @@ void executeCommand(int command_id, int * run, int consocket){
                     char * str = recvString(consocket);
                 }
             }
-            
+
             break;
 
         case HISTORY_ID:
