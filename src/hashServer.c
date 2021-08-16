@@ -35,3 +35,45 @@ LinkedList * createNode( char * site, Hash hashArray[] ){
 
     return newnode;
 }
+
+void printHash( Hash hashArray[] ){
+
+    int i = 0;
+
+    while( i < TABLE_SIZE ){
+
+      if( hashArray[i].begin != NULL ){
+
+          LinkedList * node = hashArray[i].begin;
+
+          int j = 1;
+          while( node != NULL ){
+              printf("[%d] (%d) %s\n", i, j++, node->site);
+              node = node->next;
+          }
+
+      }
+      i++;
+
+    }
+}
+
+void removeHash( Hash hashArray[] ){
+
+    int i = 0;
+    while( i < TABLE_SIZE ){
+
+        if( hashArray[i].begin != NULL ){
+
+            LinkedList * aux = hashArray[i].begin;
+
+            while( aux != NULL ){
+                hashArray[i].begin = aux->next;
+                free(aux);
+                aux = hashArray[i].begin;
+            }
+
+        }
+        i++;
+    }
+}

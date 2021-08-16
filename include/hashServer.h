@@ -16,6 +16,7 @@ typedef struct hash{
 
 int hashFunction( char * );
 LinkedList * createNode( char * , Hash [] );
-
+void removeHash( Hash [] );
+void printHash( Hash [] );
 
 #endif
