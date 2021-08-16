@@ -1,20 +1,19 @@
 all: bin/client bin/server
 
-bin/client: obj/client.o
+bin/client: obj/client.o obj/history.o obj/argsList.o obj/communication.o
 	gcc -o bin/client obj/client.o obj/history.o obj/argsList.o obj/communication.o
 
-obj/client.o: src/client.c
+obj/client.o: src/client.c src/history.c src/argsList.c src/communication.c
 	gcc -c -g src/client.c src/history.c src/argsList.c src/communication.c
 	mv *.o obj/
 
-bin/server: obj/server.o
-	gcc -o bin/server obj/server.o obj/communication.o
+bin/server: obj/server.o obj/hashServer.o obj/communication.o
+	gcc -o bin/server obj/server.o obj/hashServer.o obj/communication.o
 
-obj/server.o: src/server.c
-	gcc -c -g src/server.c src/communication.c
+obj/server.o: src/server.c src/hashServer.c src/communication.c
+	gcc -c -g src/server.c src/hashServer.c src/communication.c
 	mv *.o obj/
 
 clean:
 	clear
-	rm obj/*.o
-	rm bin/*
+	rm obj/*.o bin/*

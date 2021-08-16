@@ -18,8 +18,9 @@ List * createList(){
 void insertArg(char * StringArgument, List * listStructure){
 
     Node * newnode = (Node *) calloc(1, sizeof(Node));
-    newnode->argument = (char *) calloc(LIST_MAX_LINE_SIZE, sizeof(char));
-    strcpy(newnode->argument, StringArgument);
+    // newnode->argument = (char *) calloc(LIST_MAX_LINE_SIZE, sizeof(char));
+    // strcpy(newnode->argument, StringArgument);
+    newnode->argument = StringArgument;
     newnode->next = NULL;
 
     if(listStructure->begin == NULL){
@@ -41,6 +42,7 @@ void printList(List * listStructure){
     }
 
     printf("[%d] %s\n", i, aux->argument);
+    free(aux);
 }
 
 void removeList(List * listStructure){
@@ -56,7 +58,6 @@ void removeList(List * listStructure){
     }
 
     free(listStructure);
-    free(aux);
 
     return;
 }

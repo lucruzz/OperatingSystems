@@ -16,13 +16,15 @@
 #include <errno.h>
 
 #include "../include/communication.h"
+#include "../include/hashServer.h"
 
-void executeCommand(int command_id, int * run, int consocket){
+void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
       switch (command_id) {
 
         case LIST_ID:
             printf("[LIST COMMAND]\n");
+            printHash(hashArray);
             break;
 
         case SEARCH_ID:
@@ -35,6 +37,15 @@ void executeCommand(int command_id, int * run, int consocket){
                 for( int i = 0; i < n; i++ ){
                     // Recebe o argumento (site) enviado do cliente
                     char * str = recvString(consocket);
+
+                    LinkedList * node = searchInHash(str, hashArray);
+                    if( node == NULL ){
+                      createNode(str, hashArray);
+                      // busca na internet
+                    }else{
+                      // entrega o site para o cliente
+                    }
+
                 }
             }
 
@@ -103,6 +114,8 @@ int main(int argc, char *argv[]){
     int run = TRUE;
     int serverSocket = serverConection(argv);
     int consocket = connectionSocket(serverSocket);
+    Hash hashArray[TABLE_SIZE];
+    memset(&hashArray, 0, TABLE_SIZE*sizeof(Hash));
 
     while(run){
 
@@ -111,10 +124,11 @@ int main(int argc, char *argv[]){
         commandReceived_id = recvInt(consocket);
 
         // Executa o comando de acordo com o ID do comando recebido
-        executeCommand(commandReceived_id, &run, consocket);
+        executeCommand(commandReceived_id, hashArray, &run, consocket);
 
     }
 
+    removeHash(hashArray);
     close(consocket);
     close(serverSocket);
     return EXIT_SUCCESS;

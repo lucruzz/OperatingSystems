@@ -164,6 +164,7 @@ int main( int argc, char *argv[] ){
 
         int command_id = processCommand(command, &run, mysocket);
 
+        free(command);
 
     }
 

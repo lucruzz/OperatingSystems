@@ -20,8 +20,9 @@ int command_counter = 0;
 void insertCommand(char * command){
 
     newnode = (ListCommand *) calloc(1, sizeof(ListCommand));
-    newnode->command = (char *) calloc(HISTORY_MAX_LINE_LENGHT, sizeof(char));
-    strcpy(newnode->command, command);
+    //newnode->command = (char *) calloc(HISTORY_MAX_LINE_LENGHT, sizeof(char));
+    //strcpy(newnode->command, command);
+    newnode->command = command;
     newnode->next = NULL;
 
     if(head == NULL){
@@ -47,6 +48,8 @@ void printHistory(){
     }
 
     printf(" %d\t\b\b\b%s\n", ++cont_comandos, aux->command);
+
+    free(aux);
 
     return;
 }
