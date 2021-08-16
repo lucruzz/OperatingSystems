@@ -18,5 +18,6 @@ int hashFunction( char * );
 LinkedList * createNode( char * , Hash [] );
 void removeHash( Hash [] );
 void printHash( Hash [] );
+LinkedList * searchInHash( char * , Hash [] );
 
 #endif

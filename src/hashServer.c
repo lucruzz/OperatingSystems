@@ -58,6 +58,22 @@ void printHash( Hash hashArray[] ){
     }
 }
 
+LinkedList * searchInHash( char * site , Hash hashArray[] ){
+
+    int indexHash = hashFunction(site);
+
+    LinkedList * node = hashArray[indexHash].begin;
+
+    while( node != NULL ){
+
+        if( !strcmp(node->site, site) ){
+            return node;
+        }
+        node = node->next;
+    }
+    return NULL;
+}
+
 void removeHash( Hash hashArray[] ){
 
     int i = 0;
