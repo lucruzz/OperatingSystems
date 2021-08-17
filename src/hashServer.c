@@ -22,7 +22,6 @@ int hashFunction( char * site ){
 LinkedList * createNode( char * site, Hash hashArray[] ){
 
     LinkedList * newnode = (LinkedList *) calloc(1, sizeof(LinkedList));
-
     newnode->site = site;
 
     int index = hashFunction(site);
@@ -45,10 +44,12 @@ void printHash( Hash hashArray[] ){
       if( hashArray[i].begin != NULL ){
 
           LinkedList * node = hashArray[i].begin;
+          int n = hashArray[i].n_elements;
 
-          int j = 1;
-          while( node != NULL ){
-              printf("[%d] (%d) %s\n", i, j++, node->site);
+          for ( int j = 1; j <= n; j++ ){
+              printf("[%d] ", i);
+              printf("(%d) ", j);
+              printf("%s\n", node->site);
               node = node->next;
           }
 
@@ -71,6 +72,7 @@ LinkedList * searchInHash( char * site , Hash hashArray[] ){
         }
         node = node->next;
     }
+
     return NULL;
 }
 
@@ -82,13 +84,15 @@ void removeHash( Hash hashArray[] ){
         if( hashArray[i].begin != NULL ){
 
             LinkedList * aux = hashArray[i].begin;
+            LinkedList * tmp;
 
             while( aux != NULL ){
+                tmp = aux;
                 hashArray[i].begin = aux->next;
-                free(aux);
                 aux = hashArray[i].begin;
+                free(tmp->site);
+                free(tmp);
             }
-
         }
         i++;
     }

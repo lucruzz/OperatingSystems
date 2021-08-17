@@ -4,12 +4,12 @@
 #define MAX_SITE_STR_LENGHT 500
 #define TABLE_SIZE 10
 
-typedef struct linkedList{
+typedef struct LinkedList{
     char * site;
-    struct linkedList * next;
+    struct LinkedList * next;
 }LinkedList;
 
-typedef struct hash{
+typedef struct Hash{
     int n_elements; // Número de elementos da lista encadeada
     LinkedList * begin; // Ponteiro para head da LinkedList
 }Hash;

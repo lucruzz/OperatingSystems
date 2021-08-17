@@ -44,6 +44,7 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
                       // busca na internet
                     }else{
                       // entrega o site para o cliente
+                      free(str);
                     }
 
                 }
@@ -116,6 +117,7 @@ int main(int argc, char *argv[]){
     int consocket = connectionSocket(serverSocket);
     Hash hashArray[TABLE_SIZE];
     memset(&hashArray, 0, TABLE_SIZE*sizeof(Hash));
+
 
     while(run){
 
