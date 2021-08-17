@@ -9,9 +9,20 @@
 
 #define HISTORY_MAX_LINE_LENGHT 500
 
-typedef struct ShellCommands ShellCommands;
-void insertCommand(char * command);
-void removeHistory();
-void printHistory();
+typedef struct ShellCommands{
+    int number_of_commands;
+    struct ListCommand * begin;
+    struct ListCommand * end;
+}ShellCommands;
+
+typedef struct ListCommand{
+    char * command;
+    struct ListCommand * next;
+}ListCommand;
+
+ShellCommands * createHistory();
+void insertCommand( char * , ShellCommands * );
+void printHistory( ShellCommands * );
+void removeHistory( ShellCommands * );
 
 #endif

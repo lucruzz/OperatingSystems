@@ -55,7 +55,7 @@ void search(char *command, int mysocket){
             sendString(aux->argument, mysocket);
             aux = aux->next;
         }
-
+        free(aux);
         removeList(commandList);
 
     }else{
@@ -68,13 +68,13 @@ void list(){
     puts("> List");
 }
 
-void exit_(int * run){
+void exit_( int * run, ShellCommands * history ){
     *run = FALSE;
-    removeHistory();
+    removeHistory(history);
     puts("Client says bye bye!");
 }
 
-int processCommand(char * command, int * run, int mysocket){
+int processCommand(char * command, int * run, ShellCommands * history, int mysocket){
 
     char * strings = strtok(command, " ");
 
@@ -93,12 +93,12 @@ int processCommand(char * command, int * run, int mysocket){
     }else if( !strcmp( strings, EXIT ) ){
         command_id = EXIT_ID;
         sendInt(command_id, mysocket);
-        exit_(&(*run));
+        exit_(&(*run), history);
 
     }else if( !strcmp( strings, HISTORY ) ){
         command_id = HISTORY_ID;
         sendInt(command_id, mysocket);
-        printHistory();
+        printHistory(history);
 
     }else{
         command_id = COMMAND_ID_NOT_FOUND;
@@ -109,14 +109,14 @@ int processCommand(char * command, int * run, int mysocket){
     return command_id;
 }
 
-void * readCommand(){
+void * readCommand( ShellCommands * history ){
 
     char * command = (char *) calloc(MAX_LINE_SIZE, sizeof(char));
 
     printf(":~$ ");
     scanf(" %[^\n]%*c", command);
 
-    insertCommand(command);
+    insertCommand(command, history);
 
     return command;
 }
@@ -152,6 +152,7 @@ int main( int argc, char *argv[] ){
 
     char * command;
     int run = TRUE;
+    ShellCommands * history = createHistory();
     int mysocket = clientConnection(argv);
 
     if(mysocket == -1){
@@ -160,9 +161,9 @@ int main( int argc, char *argv[] ){
 
     while(run){
 
-        command = readCommand();
+        command = readCommand(history);
 
-        int command_id = processCommand(command, &run, mysocket);
+        int command_id = processCommand(command, &run, history, mysocket);
 
         free(command);
 

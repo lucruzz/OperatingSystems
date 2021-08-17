@@ -21,7 +21,6 @@ void insertArg(char * StringArgument, List * listStructure){
     // newnode->argument = (char *) calloc(LIST_MAX_LINE_SIZE, sizeof(char));
     // strcpy(newnode->argument, StringArgument);
     newnode->argument = StringArgument;
-    newnode->next = NULL;
 
     if(listStructure->begin == NULL){
         listStructure->begin = newnode;
@@ -47,16 +46,17 @@ void printList(List * listStructure){
 
 void removeList(List * listStructure){
 
+    int n = listStructure->n_elements;
     Node *aux = listStructure->begin;
     Node *tmp;
 
-    while(aux->next != NULL){
-        tmp = aux;
-        aux = aux->next;
-        listStructure->begin = aux;
-        free(tmp);
+    for(int i = 0; i < n; i++){
+        tmp = aux->next;
+        free(aux);
+        aux = tmp;
     }
 
+    free(tmp);
     free(listStructure);
 
     return;
