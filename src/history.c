@@ -9,70 +9,58 @@
 #include <string.h>
 #include "../include/history.h"
 
-typedef struct ListCommand{
-    char * command;
-    struct ListCommand *next;
-}ListCommand;
+ShellCommands * createHistory(){
+    return (ShellCommands *) calloc(1, sizeof(ShellCommands));
+}
 
-ListCommand *head = NULL, *newnode, *tail=NULL;
-int command_counter = 0;
+void insertCommand( char * command, ShellCommands * history ){
 
-void insertCommand(char * command){
-
-    newnode = (ListCommand *) calloc(1, sizeof(ListCommand));
-    //newnode->command = (char *) calloc(HISTORY_MAX_LINE_LENGHT, sizeof(char));
-    //strcpy(newnode->command, command);
+    ListCommand * newnode = (ListCommand *) calloc(1, sizeof(ListCommand));
     newnode->command = command;
-    newnode->next = NULL;
 
-    if(head == NULL){
-        head = newnode;
+    if(history->begin == NULL){
+        history->begin = newnode;
+
     }else{
-        tail->next = newnode;
+        ListCommand * aux = history->end;
+        aux->next = newnode;
     }
 
-    tail = newnode;
-    command_counter++;
+    history->end = newnode; // adiciono o novo nó ao final da lista
+
+    history->number_of_commands++;
 
     return;
 }
 
-void printHistory(){
+void printHistory( ShellCommands * history ){
 
-    ListCommand * aux = head;
-    int cont_comandos = 0;
+    ListCommand * aux = history->begin;
+    int number_of_command = history->number_of_commands;
 
-    while( aux->next != NULL ){
-        printf(" %d\t\b\b\b%s\n", ++cont_comandos, aux->command);
+    while( aux != NULL ){
+        printf(" %d\t\b\b\b%s\n", number_of_command++, aux->command);
         aux = aux->next;
     }
 
-    printf(" %d\t\b\b\b%s\n", ++cont_comandos, aux->command);
-
-    free(aux);
-
     return;
 }
 
-void removeHistory(){
+void removeHistory( ShellCommands * history ){
 
-    ListCommand *aux = head;
+    int n = history->number_of_commands;
+    ListCommand * aux = history->begin;
+    ListCommand * tmp;
 
-    while( aux->next != NULL ){
+    for (int i = 0; i < n; i++){
 
-        head = aux->next;
-
-        aux->command = NULL;
-        aux->next = NULL;
+        tmp = aux->next;
         free(aux);
-
-        aux = head;
+        aux = tmp;
     }
 
-    aux->command = NULL;
-    aux->next = NULL;
-
-    free(aux);
+    free(tmp);
+    free(history);
 
     return;
 }
