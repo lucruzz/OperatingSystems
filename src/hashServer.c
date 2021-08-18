@@ -1,3 +1,9 @@
+/*======================================================*/
+/* Lucas Cruz                                           */
+/* Engenharia de Computação - CEFET/RJ - UneD Petrópolis*/
+/* Sistemas Operacionais                                */
+/* Trabalho de implementação de um Servidor Proxy       */
+/*======================================================*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,20 +47,18 @@ void printHash( Hash hashArray[] ){
 
     while( i < TABLE_SIZE ){
 
-      if( hashArray[i].begin != NULL ){
+        if( hashArray[i].begin != NULL ){
 
-          LinkedList * node = hashArray[i].begin;
-          int n = hashArray[i].n_elements;
+            LinkedList * node = hashArray[i].begin;
+            int n = hashArray[i].n_elements;
 
-          for ( int j = 1; j <= n; j++ ){
-              printf("[%d] ", i);
-              printf("(%d) ", j);
-              printf("%s\n", node->site);
-              node = node->next;
-          }
+            for ( int j = 1; j <= n; j++ ){
+                printf("[%d] (%d) %s\n", i, j, node->site);
+                node = node->next;
+            }
 
-      }
-      i++;
+        }
+        i++;
 
     }
 }

@@ -19,6 +19,7 @@
 #include "../include/communication.h"
 
 #define MAX_LINE_SIZE 500
+#define HASHTABLE_SIZE 10
 
 List * determineArguments(char * commandArgs){
 
@@ -64,8 +65,29 @@ void search(char *command, int mysocket){
 }
 
 // Lista os sites da proxy
-void list(){
+void list( int mysocket ){
+
     puts("> List");
+
+    int j = 0;
+    while ( j < HASHTABLE_SIZE ){
+
+        int n = recvInt(mysocket);
+
+        if( n != 0 ){
+            char * site;
+            for (int i = 1; i <= n; i++ ){
+              site = recvString(mysocket);
+              printf("[%d] (%d) %s\n", j, i, site);
+
+            }
+        }
+        j++;
+    }
+
+
+
+
 }
 
 void exit_( int * run, ShellCommands * history ){
@@ -88,7 +110,7 @@ int processCommand(char * command, int * run, ShellCommands * history, int mysoc
     }else if( !strcmp( strings, LIST ) ){
         command_id = LIST_ID;
         sendInt(command_id, mysocket);
-        list();
+        list(mysocket);
 
     }else if( !strcmp( strings, EXIT ) ){
         command_id = EXIT_ID;

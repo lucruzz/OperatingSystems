@@ -24,7 +24,34 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
         case LIST_ID:
             printf("[LIST COMMAND]\n");
-            printHash(hashArray);
+            //printHash(hashArray);
+
+            int i = 0;
+
+            while( i < TABLE_SIZE ){
+
+                if(hashArray[i].begin == NULL){
+
+                    sendInt(0, consocket);
+
+                }else{
+
+                    LinkedList * node = hashArray[i].begin;
+                    int n = hashArray[i].n_elements;
+
+                    sendInt(n, consocket);
+
+                    for ( int j = 1; j <= n; j++ ){
+                        sendString(node->site, consocket);
+                        node = node->next;
+                    }
+
+                }
+                i++;
+
+            }
+
+
             break;
 
         case SEARCH_ID:
