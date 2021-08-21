@@ -45,7 +45,7 @@ int main(int argc, char const *argv[]) {
 			return 0;
 		}
 
-    printf("IP Address: %d\n", htonl(hostname));
+    printf("IP Address: %s\n", hostname);
 
     destinationSocket = result->ai_addr;
 
@@ -69,18 +69,42 @@ int main(int argc, char const *argv[]) {
 
     char * request  = "GET http://web.ist.utl.pt/luis.tarrataca/hello.html HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n";
 
-  	int number_of_bytes = strlen( request ) * sizeof( char );
+  	int number_of_bytes = strlen( request );// * sizeof( char );
 
-  	printf("[[ sendHTMLHeaderRequest ]]\n");
-  	printf("\tSending HTML request message with %d bytes\n", number_of_bytes );
+  	puts("Sending request...");
   	send( connection_socket, request, number_of_bytes, 0 );
 
-		printf("\t-----HTML Request Header-----\n");
-		printf("%s", request );
+    char * page = (char*) calloc (500, sizeof( char ) );
 
+    char string_from_page[10];
+    memset(&string_from_page, 0, 10*sizeof(string_from_page));
+
+    int index = 0;
+
+    while( 1 ){
+
+        int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
+
+        index += page_number_of_bytes;
+
+        strcat(page, string_from_page);
+
+        if(index%10 != 0){
+          break;
+        }
+
+        memset(&string_from_page, 0, 10*sizeof(string_from_page));
+
+    }
+
+    puts("---");
+
+    printf("%s\n", page);
 
 
     close(connection_socket);
+    free(result);
+    free(page);
 
     return 0;
 
