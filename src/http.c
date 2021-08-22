@@ -81,6 +81,9 @@ int main(int argc, char const *argv[]) {
     char * info_char;
     int index = 0;
 
+    FILE * pFile = fopen ("infoHTML.txt", "w");
+
+
     while( 1 ){
 
         int head_number_of_bytes = recv( connection_socket, info_char, 1*sizeof(char), 0);
@@ -89,16 +92,43 @@ int main(int argc, char const *argv[]) {
 
         *( page_info + index - 1 ) = *info_char;
 
+        //fprintf (pFile, "%c", *info_char);
+
         if( page_info[index - 4] == '\r' && page_info[index - 3] == '\n' &&
             page_info[index - 2] == '\r' && page_info[index - 1] == '\n' ){
+            *( page_info + index ) = '\0';
+            //fprintf (pFile, "%c", *info_char);
             break;
         }
 
     }
     puts("-----------------------------------------------");
-    printf("%s\n", page_info);
+    //printf("%s\n", page_info);
+    fprintf (pFile, "%s", page_info);
 
-    char * page = (char*) calloc (500, sizeof( char ) );
+    fclose (pFile);
+
+    pFile = fopen ("infoHTML.txt", "r");
+
+    char linha[1000];
+    int len;
+    while( fscanf( pFile, " %[^\n]%*c", linha) != EOF ){//
+        char * substr = strstr(linha, "Content-Length: ");
+        if(substr != NULL){
+          char * n = strtok(substr, " ");
+          n = strtok(NULL, " ");
+          n[2] = '\0';
+          len = atoi(n);
+          break;
+        }
+
+    }
+
+    fclose (pFile);
+
+    //FILE * html_page = fopen ("page.html", "a");
+
+    char * page = (char*) calloc (len, sizeof( char ) );
     char string_from_page[10];
     index = 0;
     memset(&string_from_page, 0, 10*sizeof(string_from_page));
@@ -108,11 +138,14 @@ int main(int argc, char const *argv[]) {
         index += page_number_of_bytes;
         strcat(page, string_from_page);
 
+        //fprintf (html_page, "%s", string_from_page);
+
         if(index%10 != 0){
           break;
         }
         memset(&string_from_page, 0, 10*sizeof(string_from_page));
     }
+    //fclose(html_page);
 
     puts("-----------------------------------------------");
     printf("%s\n", page);
