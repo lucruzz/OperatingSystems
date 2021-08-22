@@ -20,8 +20,7 @@
 
 int main(int argc, char const *argv[]) {
 
-    //char * url = "web.ist.utl.pt";///luis.tarrataca/hello.html";
-    char * url = "www.google.com";
+    char * url = "web.ist.utl.pt";///luis.tarrataca/hello.html";
 
     struct sockaddr_in server_add; /*structure for handling internet addresses*/
     struct sockaddr * destinationSocket;
@@ -73,7 +72,6 @@ int main(int argc, char const *argv[]) {
 
     char * request  = "GET http://web.ist.utl.pt/luis.tarrataca/hello.html HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n";
 
-    //char * request  = "GET http://www.google.com/preferences HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n";
   	int number_of_bytes = strlen( request );// * sizeof( char );
 
   	puts("Sending request...");
@@ -117,7 +115,6 @@ int main(int argc, char const *argv[]) {
     }
 
     puts("-----------------------------------------------");
-
     printf("%s\n", page);
 
     close(connection_socket);
