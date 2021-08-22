@@ -7,6 +7,9 @@
 // https://www.gta.ufrj.br/ensino/eel878/sockets/index.html
 // https://www.gnu.org/software/libc/manual/html_node/index.html#SEC_Contents
 // https://man7.org/linux/man-pages/man3/getaddrinfo.3.html
+
+// https://stackoverflow.com/questions/22077802/simple-c-example-of-doing-an-http-post-and-consuming-the-response
+// https://www.quora.com/What-exactly-is-r-in-the-C-language
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -17,7 +20,8 @@
 
 int main(int argc, char const *argv[]) {
 
-    char * url = "web.ist.utl.pt";///luis.tarrataca/hello.html";
+    //char * url = "web.ist.utl.pt";///luis.tarrataca/hello.html";
+    char * url = "www.google.com";
 
     struct sockaddr_in server_add; /*structure for handling internet addresses*/
     struct sockaddr * destinationSocket;
@@ -69,42 +73,57 @@ int main(int argc, char const *argv[]) {
 
     char * request  = "GET http://web.ist.utl.pt/luis.tarrataca/hello.html HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n";
 
+    //char * request  = "GET http://www.google.com/preferences HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n";
   	int number_of_bytes = strlen( request );// * sizeof( char );
 
   	puts("Sending request...");
   	send( connection_socket, request, number_of_bytes, 0 );
 
-    char * page = (char*) calloc (500, sizeof( char ) );
-
-    char string_from_page[10];
-    memset(&string_from_page, 0, 10*sizeof(string_from_page));
-
+    char * page_info = (char*) calloc (500, sizeof( char ) );
+    char * info_char;
     int index = 0;
 
     while( 1 ){
 
+        int head_number_of_bytes = recv( connection_socket, info_char, 1*sizeof(char), 0);
+
+        index += head_number_of_bytes;
+
+        *( page_info + index - 1 ) = *info_char;
+
+        if( page_info[index - 4] == '\r' && page_info[index - 3] == '\n' &&
+            page_info[index - 2] == '\r' && page_info[index - 1] == '\n' ){
+            break;
+        }
+
+    }
+    puts("-----------------------------------------------");
+    printf("%s\n", page_info);
+
+    char * page = (char*) calloc (500, sizeof( char ) );
+    char string_from_page[10];
+    index = 0;
+    memset(&string_from_page, 0, 10*sizeof(string_from_page));
+
+    while( 1 ){
         int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
-
         index += page_number_of_bytes;
-
         strcat(page, string_from_page);
 
         if(index%10 != 0){
           break;
         }
-
         memset(&string_from_page, 0, 10*sizeof(string_from_page));
-
     }
 
-    puts("---");
+    puts("-----------------------------------------------");
 
     printf("%s\n", page);
-
 
     close(connection_socket);
     free(result);
     free(page);
+    free(page_info);
 
     return 0;
 
