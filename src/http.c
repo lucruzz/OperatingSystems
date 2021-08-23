@@ -10,6 +10,10 @@
 
 // https://stackoverflow.com/questions/22077802/simple-c-example-of-doing-an-http-post-and-consuming-the-response
 // https://www.quora.com/What-exactly-is-r-in-the-C-language
+
+// https://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
+// https://datatracker.ietf.org/doc/html/rfc2616#section-7.1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -72,46 +76,49 @@ int main(int argc, char const *argv[]) {
 
     char * request  = "GET http://web.ist.utl.pt/luis.tarrataca/hello.html HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n";
 
-  	int number_of_bytes = strlen( request );// * sizeof( char );
+  	int number_of_bytes = strlen( request );//* sizeof( char );
 
   	puts("Sending request...");
   	send( connection_socket, request, number_of_bytes, 0 );
 
-    char * page_info = (char*) calloc (500, sizeof( char ) );
-    char * info_char;
+    char * page_info = (char*) calloc (500, 1*sizeof( char ) );
+    char info_char;
     int index = 0;
 
     FILE * pFile = fopen ("infoHTML.txt", "w");
 
-
     while( 1 ){
 
-        int head_number_of_bytes = recv( connection_socket, info_char, 1*sizeof(char), 0);
+        int head_number_of_bytes = recv( connection_socket, &info_char, 1*sizeof(char), 0);
 
+        *(page_info + index) = info_char;
         index += head_number_of_bytes;
 
-        *( page_info + index - 1 ) = *info_char;
-
-        //fprintf (pFile, "%c", *info_char);
-
-        if( page_info[index - 4] == '\r' && page_info[index - 3] == '\n' &&
-            page_info[index - 2] == '\r' && page_info[index - 1] == '\n' ){
+        // De acordo com a documentação a request line vai ter pelo menos: HTTP/1.XX 200 OK\r\n
+        // Então, quando page_info tiver tamanho maior que 10 já pode começar a verificar
+        // Se já é possível ler o corpo do HTML
+        if( strlen(page_info) > 10  &&*( page_info + index - 4 ) == '\r' && *( page_info + index - 3 ) == '\n' &&
+            *( page_info + index - 2 ) == '\r' && *( page_info + index - 1 ) == '\n' ){
             *( page_info + index ) = '\0';
-            //fprintf (pFile, "%c", *info_char);
-            break;
+                // fprintf (pFile, "%c", *info_char);
+
+                *( page_info + index ) = '\0';
+                break;
+
         }
 
     }
-    puts("-----------------------------------------------");
+
+    //puts("-----------------------------------------------");
     //printf("%s\n", page_info);
     fprintf (pFile, "%s", page_info);
 
     fclose (pFile);
-
+    //
     pFile = fopen ("infoHTML.txt", "r");
 
     char linha[1000];
-    int len;
+    int len = 0;
     while( fscanf( pFile, " %[^\n]%*c", linha) != EOF ){//
         char * substr = strstr(linha, "Content-Length: ");
         if(substr != NULL){
@@ -126,30 +133,30 @@ int main(int argc, char const *argv[]) {
 
     fclose (pFile);
 
-    //FILE * html_page = fopen ("page.html", "a");
+    FILE * html_page = fopen ("page.html", "w");
 
     char * page = (char*) calloc (len, sizeof( char ) );
     char string_from_page[10];
     index = 0;
     memset(&string_from_page, 0, 10*sizeof(string_from_page));
 
-    while( 1 ){
+/*    while( 1 ){
         int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
         index += page_number_of_bytes;
         strcat(page, string_from_page);
 
-        //fprintf (html_page, "%s", string_from_page);
+        fprintf (html_page, "%s", string_from_page);
 
         if(index%10 != 0){
           break;
         }
         memset(&string_from_page, 0, 10*sizeof(string_from_page));
     }
-    //fclose(html_page);
+*/
+    fclose(html_page);
 
-    puts("-----------------------------------------------");
-    printf("%s\n", page);
-
+    //puts("-----------------------------------------------");
+    //printf("%s\n", page);
     close(connection_socket);
     free(result);
     free(page);
