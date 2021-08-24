@@ -39,8 +39,8 @@ int main(int argc, char const *argv[]) {
     int success = getaddrinfo( url, NULL, &hints, &result );
 
     if( success != 0 ){ //getaddrinfo returns 0 if well succeeded
-      perror("Error in getaddrinfo");
-      exit(EXIT_FAILURE);
+        perror("Error in getaddrinfo");
+        exit(EXIT_FAILURE);
     }
 
     char hostname[NI_MAXHOST];
@@ -48,8 +48,8 @@ int main(int argc, char const *argv[]) {
     success = getnameinfo( result->ai_addr, result->ai_addrlen, hostname, NI_MAXHOST, NULL, 0, 0 );
 
     if( success != 0 ){
-			perror("Error in getnameinfo");
-			return 0;
+  			perror("Error in getnameinfo");
+  			return 0;
 		}
 
     printf("IP Address: %s\n", hostname);
@@ -97,10 +97,9 @@ int main(int argc, char const *argv[]) {
         // De acordo com a documentação a request line vai ter pelo menos: HTTP/1.XX 200 OK\r\n
         // Então, quando page_info tiver tamanho maior que 10 já pode começar a verificar
         // Se já é possível ler o corpo do HTML
-        if( strlen(page_info) > 10  &&*( page_info + index - 4 ) == '\r' && *( page_info + index - 3 ) == '\n' &&
+        if( index >= 5  && *( page_info + index - 4 ) == '\r' && *( page_info + index - 3 ) == '\n' &&
             *( page_info + index - 2 ) == '\r' && *( page_info + index - 1 ) == '\n' ){
             *( page_info + index ) = '\0';
-                // fprintf (pFile, "%c", *info_char);
 
                 *( page_info + index ) = '\0';
                 break;
@@ -135,24 +134,26 @@ int main(int argc, char const *argv[]) {
 
     FILE * html_page = fopen ("page.html", "w");
 
-    char * page = (char*) calloc (len, sizeof( char ) );
+    int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
+
+    char * page = (char*) calloc (len + plus_size, sizeof( char ) );
     char string_from_page[10];
     index = 0;
     memset(&string_from_page, 0, 10*sizeof(string_from_page));
 
-/*    while( 1 ){
+    while( 1 ){
         int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
         index += page_number_of_bytes;
         strcat(page, string_from_page);
 
         fprintf (html_page, "%s", string_from_page);
 
-        if(index%10 != 0){
+        if( index % 10 != 0){
           break;
         }
         memset(&string_from_page, 0, 10*sizeof(string_from_page));
     }
-*/
+
     fclose(html_page);
 
     //puts("-----------------------------------------------");
