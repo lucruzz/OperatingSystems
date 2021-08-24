@@ -22,9 +22,22 @@
 #include <netinet/in.h> /* sockaddr_in */
 #include <netdb.h>
 
-int main(int argc, char const *argv[]) {
+char * treatingURL( char * url ){
 
-    char * url = "web.ist.utl.pt";///luis.tarrataca/hello.html";
+  int url_length = strlen(url);
+
+  char * path_to_HTML = ( char * ) memchr (url, '/', url_length);
+  int path_to_HTML_length = strlen(path_to_HTML);
+
+  int lenght_server_url = url_length - path_to_HTML_length;
+  char * server_URL = (char *) calloc( lenght_server_url + 1, sizeof(char));
+  memcpy( server_URL, url, lenght_server_url );
+  *(server_URL + lenght_server_url) = '\0';
+
+  return server_URL;
+}
+
+struct addrinfo * getWebsiteSocket( char * url ){
 
     struct sockaddr_in server_add; /*structure for handling internet addresses*/
     struct sockaddr * destinationSocket;
@@ -33,7 +46,7 @@ int main(int argc, char const *argv[]) {
 
     memset( &hints, 0, sizeof( hints ));
     hints.ai_family = AF_INET; // 2
-  	hints.ai_protocol = SOCK_STREAM; // 1
+    hints.ai_protocol = SOCK_STREAM; // 1
 
     /*returns one or more addrinfo structures, each of which contains an Internet address*/
     int success = getaddrinfo( url, NULL, &hints, &result );
@@ -48,22 +61,39 @@ int main(int argc, char const *argv[]) {
     success = getnameinfo( result->ai_addr, result->ai_addrlen, hostname, NI_MAXHOST, NULL, 0, 0 );
 
     if( success != 0 ){
-  			perror("Error in getnameinfo");
-  			return 0;
-		}
+        perror("Error in getnameinfo");
+        return 0;
+    }
 
     printf("IP Address: %s\n", hostname);
 
-    destinationSocket = result->ai_addr;
+    return result;
+    //destinationSocket = result->ai_addr;
 
-    int connection_socket = socket(result->ai_family, result->ai_protocol, 0);
+    //return destinationSocket;
+}
+
+int main(int argc, char const *argv[]) {
+
+    char * url = "web.ist.utl.pt/luis.tarrataca/hello.html";
+
+    char * server_URL = treatingURL(url);
+
+    struct addrinfo * result = getWebsiteSocket(server_URL);
+
+
+    /*****************************************************/
+
+    struct sockaddr * destinationSocket = result->ai_addr;
+
+    int connection_socket = socket( result->ai_family, result->ai_protocol, 0);
 
     if (connection_socket == -1){
         //puts("Viiishi!");
         perror("Socket error");
         exit(EXIT_FAILURE);
     }
-    ((struct sockaddr_in*) result->ai_addr)->sin_port = htons( 80 );
+    ((struct sockaddr_in*) destinationSocket)->sin_port = htons( 80 );
     int connectionResult = connect(connection_socket, destinationSocket, sizeof( struct sockaddr_in ));
 
     if ( connectionResult == -1){
@@ -80,6 +110,8 @@ int main(int argc, char const *argv[]) {
 
   	puts("Sending request...");
   	send( connection_socket, request, number_of_bytes, 0 );
+
+    /*****************************************************/
 
     char * page_info = (char*) calloc (500, 1*sizeof( char ) );
     char info_char;
@@ -100,6 +132,7 @@ int main(int argc, char const *argv[]) {
         if( index >= 5  && *( page_info + index - 4 ) == '\r' && *( page_info + index - 3 ) == '\n' &&
             *( page_info + index - 2 ) == '\r' && *( page_info + index - 1 ) == '\n' ){
             *( page_info + index ) = '\0';
+                // fprintf (pFile, "%c", *info_char);
 
                 *( page_info + index ) = '\0';
                 break;
@@ -162,6 +195,7 @@ int main(int argc, char const *argv[]) {
     free(result);
     free(page);
     free(page_info);
+    free(server_URL);
 
     return 0;
 
