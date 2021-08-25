@@ -105,20 +105,7 @@ int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
     return connection_socket;
 }
 
-int main(int argc, char const *argv[]) {
-
-    char * url = "web.ist.utl.pt/luis.tarrataca/hello.html";
-
-    char * server_URL = treatingURL(url);
-
-    struct addrinfo * result = getWebsiteSocket(server_URL);
-
-
-    /*****************************************************/
-
-    int connection_socket = conncetionWebsiteSocket(url, result);
-
-    /*****************************************************/
+void getHTMLinformation( int connection_socket ){
 
     char * page_info = (char*) calloc (500, 1*sizeof( char ) );
     char info_char;
@@ -153,24 +140,78 @@ int main(int argc, char const *argv[]) {
     fprintf (pFile, "%s", page_info);
 
     fclose (pFile);
-    //
-    pFile = fopen ("infoHTML.txt", "r");
+    free(page_info);
+
+}
+
+int getHTMLlength(){ return 0; }
+
+// void getHTML( int connection_socket, int len ){
+//
+//     FILE * html_page = fopen ("page.html", "w");
+//
+//     int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
+//
+//     char * page = (char*) calloc (len + plus_size, sizeof( char ) );
+//     char string_from_page[10];
+//     int index = 0;
+//     memset(&string_from_page, 0, 10*sizeof(string_from_page));
+//
+//     while( 1 ){
+//         int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
+//         index += page_number_of_bytes;
+//         strcat(page, string_from_page);
+//
+//         fprintf (html_page, "%s", string_from_page);
+//
+//         if( index % 10 != 0){
+//             break;
+//         }
+//         memset(&string_from_page, 0, 10*sizeof(string_from_page));
+//     }
+//
+//     fclose(html_page);
+//     free(page);
+//
+// }
+
+
+int main(int argc, char const *argv[]) {
+
+    char * url = "web.ist.utl.pt/luis.tarrataca/hello.html";
+
+    char * server_URL = treatingURL( url );
+
+    struct addrinfo * result = getWebsiteSocket( server_URL );
+
+    int connection_socket = conncetionWebsiteSocket( url, result );
+
+    getHTMLinformation( connection_socket );
+
+    /****************************************************************/
+    FILE * pFile = fopen ("infoHTML.txt", "r");
 
     char linha[1000];
     int len = 0;
-    while( fscanf( pFile, " %[^\n]%*c", linha) != EOF ){//
+    while( fscanf( pFile, " %[^\n]%*c", linha) != EOF ){
         char * substr = strstr(linha, "Content-Length: ");
         if(substr != NULL){
-          char * n = strtok(substr, " ");
-          n = strtok(NULL, " ");
-          n[2] = '\0';
-          len = atoi(n);
-          break;
+            char * n = strtok(substr, " ");
+            n = strtok(NULL, " ");
+            n[2] = '\0';
+            len = atoi(n);
+            break;
         }
 
     }
 
     fclose (pFile);
+    /****************************************************************/
+
+
+    /****************************************************************/
+
+    // getHTML( connection_socket, len );
 
     FILE * html_page = fopen ("page.html", "w");
 
@@ -178,7 +219,7 @@ int main(int argc, char const *argv[]) {
 
     char * page = (char*) calloc (len + plus_size, sizeof( char ) );
     char string_from_page[10];
-    index = 0;
+    int index = 0;
     memset(&string_from_page, 0, 10*sizeof(string_from_page));
 
     while( 1 ){
@@ -196,12 +237,14 @@ int main(int argc, char const *argv[]) {
 
     fclose(html_page);
 
+    /****************************************************************/
+
     //puts("-----------------------------------------------");
     //printf("%s\n", page);
     close(connection_socket);
     free(result);
     free(page);
-    free(page_info);
+
     free(server_URL);
 
     return 0;
