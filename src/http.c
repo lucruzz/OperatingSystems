@@ -22,19 +22,21 @@
 #include <netinet/in.h> /* sockaddr_in */
 #include <netdb.h>
 
+#define ERROR -1
+
 char * treatingURL( char * url ){
 
-  int url_length = strlen(url);
+    int url_length = strlen(url);
 
-  char * path_to_HTML = ( char * ) memchr (url, '/', url_length);
-  int path_to_HTML_length = strlen(path_to_HTML);
+    char * path_to_HTML = ( char * ) memchr (url, '/', url_length);
+    int path_to_HTML_length = strlen(path_to_HTML);
 
-  int lenght_server_url = url_length - path_to_HTML_length;
-  char * server_URL = (char *) calloc( lenght_server_url + 1, sizeof(char));
-  memcpy( server_URL, url, lenght_server_url );
-  *(server_URL + lenght_server_url) = '\0';
+    int lenght_server_url = url_length - path_to_HTML_length;
+    char * server_URL = (char *) calloc( lenght_server_url + 1, sizeof(char));
+    memcpy( server_URL, url, lenght_server_url );
+    *(server_URL + lenght_server_url) = '\0';
 
-  return server_URL;
+    return server_URL;
 }
 
 struct addrinfo * getWebsiteSocket( char * url ){
@@ -73,6 +75,36 @@ struct addrinfo * getWebsiteSocket( char * url ){
     //return destinationSocket;
 }
 
+int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
+
+    struct sockaddr * destinationSocket = result->ai_addr;
+
+    int connection_socket = socket( result->ai_family, result->ai_protocol, 0);
+
+    if (connection_socket == ERROR){
+        perror("Socket error");
+        exit(EXIT_FAILURE);
+    }
+    ((struct sockaddr_in*) destinationSocket)->sin_port = htons( 80 );
+    int connectionResult = connect(connection_socket, destinationSocket, sizeof( struct sockaddr_in ));
+
+    if ( connectionResult == ERROR){
+        perror("Connection error");
+        exit(EXIT_FAILURE);
+    }else{
+        puts("Site connection accepted!");
+    }
+
+    char * request  = "GET http://web.ist.utl.pt/luis.tarrataca/hello.html HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n";
+
+    int number_of_bytes = strlen( request );//* sizeof( char );
+
+    puts("Sending request...");
+    send( connection_socket, request, number_of_bytes, 0 );
+
+    return connection_socket;
+}
+
 int main(int argc, char const *argv[]) {
 
     char * url = "web.ist.utl.pt/luis.tarrataca/hello.html";
@@ -84,32 +116,7 @@ int main(int argc, char const *argv[]) {
 
     /*****************************************************/
 
-    struct sockaddr * destinationSocket = result->ai_addr;
-
-    int connection_socket = socket( result->ai_family, result->ai_protocol, 0);
-
-    if (connection_socket == -1){
-        //puts("Viiishi!");
-        perror("Socket error");
-        exit(EXIT_FAILURE);
-    }
-    ((struct sockaddr_in*) destinationSocket)->sin_port = htons( 80 );
-    int connectionResult = connect(connection_socket, destinationSocket, sizeof( struct sockaddr_in ));
-
-    if ( connectionResult == -1){
-        //puts("Não foi dessa vez!");
-        perror("Connection error");
-        exit(EXIT_FAILURE);
-    }else{
-        puts("Site connection accepted!");
-    }
-
-    char * request  = "GET http://web.ist.utl.pt/luis.tarrataca/hello.html HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n";
-
-  	int number_of_bytes = strlen( request );//* sizeof( char );
-
-  	puts("Sending request...");
-  	send( connection_socket, request, number_of_bytes, 0 );
+    int connection_socket = conncetionWebsiteSocket(url, result);
 
     /*****************************************************/
 
