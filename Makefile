@@ -7,11 +7,11 @@ obj/client.o: src/client.c src/history.c src/argsList.c src/communication.c
 	gcc -c -g src/client.c src/history.c src/argsList.c src/communication.c
 	mv *.o obj/
 
-bin/server: obj/server.o obj/hashServer.o obj/communication.o
-	gcc -o bin/server obj/server.o obj/hashServer.o obj/communication.o
+bin/server: obj/server.o obj/hashServer.o obj/communication.o obj/http.o
+	gcc -o bin/server obj/server.o obj/hashServer.o obj/communication.o obj/http.o
 
-obj/server.o: src/server.c src/hashServer.c src/communication.c
-	gcc -c -g src/server.c src/hashServer.c src/communication.c
+obj/server.o: src/server.c src/hashServer.c src/communication.c src/http.c
+	gcc -c -g src/server.c src/hashServer.c src/communication.c src/http.c
 	mv *.o obj/
 
 clean:

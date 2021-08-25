@@ -17,6 +17,7 @@
 
 #include "../include/communication.h"
 #include "../include/hashServer.h"
+#include "../include/http.h"
 
 void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
@@ -51,7 +52,6 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
             }
 
-
             break;
 
         case SEARCH_ID:
@@ -67,8 +67,11 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
                     LinkedList * node = searchInHash(str, hashArray);
                     if( node == NULL ){
-                      createNode(str, hashArray);
                       // busca na internet
+                      http(str);
+
+                      // Inclui na hash
+                      createNode(str, hashArray);
                     }else{
                       // entrega o site para o cliente
                       free(str);

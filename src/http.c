@@ -22,7 +22,7 @@
 #include <netinet/in.h> /* sockaddr_in */
 #include <netdb.h>
 
-#define ERROR -1
+#include "../include/http.h"
 
 char * treatingURL( char * url ){
 
@@ -193,9 +193,8 @@ void getHTML( int connection_socket, int len ){
 
 }
 
-int main(int argc, char const *argv[]) {
+void http( char * url ){
 
-    char * url = "web.ist.utl.pt/luis.tarrataca/hello.html";
     char * server_URL = treatingURL( url );
 
     struct addrinfo * result = getWebsiteSocket( server_URL );
@@ -259,5 +258,76 @@ int main(int argc, char const *argv[]) {
 
     /****************************************************************/
     close(connection_socket);
+
+}
+
+/*
+int main(int argc, char const *argv[]) {
+
+    char * url = "web.ist.utl.pt/luis.tarrataca/hello.html";
+    char * server_URL = treatingURL( url );
+
+    struct addrinfo * result = getWebsiteSocket( server_URL );
+    free(server_URL);
+
+    int connection_socket = conncetionWebsiteSocket( url, result );
+    free(result);
+
+    getHTMLinformation( connection_socket );
+    //////////////////////////////////////////////////////
+    // int len = getHTMLlength();
+
+    FILE * pFile = fopen ("infoHTML.txt", "r");
+
+    char linha[1000];
+    int len = 0;
+
+    while( fscanf( pFile, " %[^\n]%*c", linha ) != EOF ){
+
+        char * substr = strstr(linha, "Content-Length: ");
+
+        if(substr != NULL){
+            int line_length = strlen(linha);
+            char * length_str = ( char * ) memchr (linha, ' ', line_length);
+            len = atoi(length_str);
+            break;
+        }
+
+    }
+
+    fclose (pFile);
+    //////////////////////////////////////////////////////
+
+    //////////////////////////////////////////////////////
+    // getHTML( connection_socket, len );
+    FILE * html_page = fopen ("page.html", "w");
+
+    int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
+    int index = 0;
+
+    char * page = (char*) calloc ( len + plus_size, sizeof( char ) );
+    char string_from_page[10];
+
+    memset( &string_from_page, 0, 10*sizeof(string_from_page) );
+
+    while( 1 ){
+        int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
+        index += page_number_of_bytes;
+        strcat(page, string_from_page);
+
+        fprintf (html_page, "%s", string_from_page);
+
+        if( index % 10 != 0){
+            break;
+        }
+        memset(&string_from_page, 0, 10*sizeof(string_from_page));
+    }
+
+    fclose(html_page);
+    free(page);
+
+    //////////////////////////////////////////////////////
+    close(connection_socket);
     return 0;
 }
+*/
