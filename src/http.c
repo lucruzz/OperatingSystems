@@ -27,11 +27,10 @@
 char * treatingURL( char * url ){
 
     int url_length = strlen(url);
-
     char * path_to_HTML = ( char * ) memchr (url, '/', url_length);
     int path_to_HTML_length = strlen(path_to_HTML);
-
     int lenght_server_url = url_length - path_to_HTML_length;
+
     char * server_URL = (char *) calloc( lenght_server_url + 1, sizeof(char));
     memcpy( server_URL, url, lenght_server_url );
     *(server_URL + lenght_server_url) = '\0';
@@ -95,7 +94,13 @@ int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
         puts("Site connection accepted!");
     }
 
-    char * request  = "GET http://web.ist.utl.pt/luis.tarrataca/hello.html HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n";
+    char request[1000];
+    memset(request, 0, 1000*sizeof(char));
+    strcat(request, "GET http://");
+    strcat(request, url);
+    strcat(request, " HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n");
+
+    //char * request  = "GET http://web.ist.utl.pt/luis.tarrataca/hello.html HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n";
 
     int number_of_bytes = strlen( request );//* sizeof( char );
 
@@ -141,6 +146,8 @@ void getHTMLinformation( int connection_socket ){
 
     fclose (pFile);
     free(page_info);
+
+    printf("Informations about page collected!\n");
 }
 
 int getHTMLlength(){
@@ -190,10 +197,12 @@ void getHTML( int connection_socket, int len ){
 
     fclose(html_page);
     free(page);
-
 }
 
 void http( char * url ){
+
+    // Se a url começar com http:// dará erro, porque não está sendo tratado
+    // o inicio da url com protocolo
 
     char * server_URL = treatingURL( url );
 
@@ -258,6 +267,8 @@ void http( char * url ){
 
     /****************************************************************/
     close(connection_socket);
+
+    printf("HTML page collected!\n");
 
 }
 
