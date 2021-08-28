@@ -11,9 +11,9 @@ bin/server: obj/server.o obj/hashServer.o obj/communication.o obj/http.o
 	gcc -o bin/server obj/server.o obj/hashServer.o obj/communication.o obj/http.o
 
 obj/server.o: src/server.c src/hashServer.c src/communication.c src/http.c
-	gcc -c -g src/server.c src/hashServer.c src/communication.c src/http.c
+	gcc -c -g -D_GNU_SOURCE src/server.c src/hashServer.c src/communication.c src/http.c
 	mv *.o obj/
 
 clean:
 	clear
-	rm obj/*.o bin/*
+	rm obj/*.o bin/* *.txt *.html
