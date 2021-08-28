@@ -29,11 +29,11 @@ char * treatingURL( char * url ){
     int url_length = strlen(url);
     char * path_to_HTML = ( char * ) memchr (url, '/', url_length);
     int path_to_HTML_length = strlen(path_to_HTML);
-    int lenght_server_url = url_length - path_to_HTML_length;
+    int length_server_url = url_length - path_to_HTML_length;
 
-    char * server_URL = (char *) calloc( lenght_server_url + 1, sizeof(char));
-    memcpy( server_URL, url, lenght_server_url );
-    *(server_URL + lenght_server_url) = '\0';
+    char * server_URL = (char *) calloc( length_server_url + 1, sizeof(char));
+    memcpy( server_URL, url, length_server_url );
+    *(server_URL + length_server_url) = '\0';
 
     return server_URL;
 }
@@ -116,6 +116,8 @@ char * getHTMLinformation( char * url, int connection_socket ){
     int length_url = strlen(url);
     char * info_file = (char *) memrchr(url, '/', length_url) + 1;
     strcat(info_file, ".txt");
+
+    printf(">>> %s\n>>>%s\n", url, info_file);
 
     char * page_info = (char*) calloc (500, 1*sizeof( char ) );
     char info_char;
@@ -245,13 +247,8 @@ void http( char * url ){
     /****************************************************************/
     // getHTML( connection_socket, len );
     int lenght_info_file = strlen(info_file);
-    char * html_file = (char *) calloc (lenght_info_file, sizeof(char));;
-
+    char * html_file = (char *) calloc (lenght_info_file, sizeof(char));
     memcpy( html_file, info_file, lenght_info_file - 4 );
-    printf("%s\n", html_file);
-
-    //char * html_file = (char *) memchr(info_file, 'l', lenght_info_file);
-
 
     FILE * html_page = fopen (html_file, "w");
 
@@ -290,6 +287,8 @@ void http( char * url ){
 
 /*
 int main(int argc, char const *argv[]) {
+  // search web.ist.utl.pt/luis.tarrataca/hello.html www.gnu.org/software/libc/manual/html_node/Internet-Namespace.html
+    //www.gnu.org/software/libc/manual/html_node/Internet-Namespace.html
 
     char * url = "web.ist.utl.pt/luis.tarrataca/hello.html";
     char * server_URL = treatingURL( url );

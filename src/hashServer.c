@@ -21,7 +21,6 @@ int hashFunction( char * site ){
         ascii_decimal = (int)(*site + i);
         sum = ascii_decimal + i + 1;
     }
-
     return (sum + n) % 10;
 }
 

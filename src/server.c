@@ -66,15 +66,17 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
                     char * str = recvString(consocket);
 
                     LinkedList * node = searchInHash(str, hashArray);
-                    if( node == NULL ){
-                      // busca na internet
-                      http(str);
 
-                      // Inclui na hash
-                      createNode(str, hashArray);
+                    if( node == NULL ){
+                        // busca na internet
+                        http(str);
+                        
+                        // Inclui na hash
+                        createNode(str, hashArray);
                     }else{
-                      // entrega o site para o cliente
-                      free(str);
+                        // entrega o site para o cliente
+                        puts("Page on proxy!");
+                        free(str);
                     }
 
                 }
