@@ -110,13 +110,18 @@ int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
     return connection_socket;
 }
 
-void getHTMLinformation( int connection_socket ){
+char * getHTMLinformation( char * url, int connection_socket ){
+
+    // Adiciona a extensão txt para armazenar as informações da página
+    int length_url = strlen(url);
+    char * info_file = (char *) memrchr(url, '/', length_url) + 1;
+    strcat(info_file, ".txt");
 
     char * page_info = (char*) calloc (500, 1*sizeof( char ) );
     char info_char;
     int index = 0;
 
-    FILE * pFile = fopen ("infoHTML.txt", "w");
+    FILE * pFile = fopen (info_file, "w");
 
     while( 1 ){
 
@@ -130,17 +135,14 @@ void getHTMLinformation( int connection_socket ){
         // Se já é possível ler o corpo do HTML
         if( index >= 5  && *( page_info + index - 4 ) == '\r' && *( page_info + index - 3 ) == '\n' &&
             *( page_info + index - 2 ) == '\r' && *( page_info + index - 1 ) == '\n' ){
-            *( page_info + index ) = '\0';
-                // fprintf (pFile, "%c", *info_char);
 
                 *( page_info + index ) = '\0';
+                //fprintf (pFile, "%c", *info_char);
                 break;
 
         }
 
     }
-
-    //puts("-----------------------------------------------");
     //printf("%s\n", page_info);
     fprintf (pFile, "%s", page_info);
 
@@ -148,6 +150,9 @@ void getHTMLinformation( int connection_socket ){
     free(page_info);
 
     printf("Informations about page collected!\n");
+
+    return info_file;
+
 }
 
 int getHTMLlength(){
@@ -212,11 +217,11 @@ void http( char * url ){
     int connection_socket = conncetionWebsiteSocket( url, result );
     free(result);
 
-    getHTMLinformation( connection_socket );
+    char * info_file = getHTMLinformation( url, connection_socket );
     /****************************************************************/
     // int len = getHTMLlength();
 
-    FILE * pFile = fopen ("infoHTML.txt", "r");
+    FILE * pFile = fopen (info_file, "r");
 
     char linha[1000];
     int len = 0;
@@ -239,7 +244,16 @@ void http( char * url ){
 
     /****************************************************************/
     // getHTML( connection_socket, len );
-    FILE * html_page = fopen ("page.html", "w");
+    int lenght_info_file = strlen(info_file);
+    char * html_file = (char *) calloc (lenght_info_file, sizeof(char));;
+
+    memcpy( html_file, info_file, lenght_info_file - 4 );
+    printf("%s\n", html_file);
+
+    //char * html_file = (char *) memchr(info_file, 'l', lenght_info_file);
+
+
+    FILE * html_page = fopen (html_file, "w");
 
     int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
     int index = 0;
@@ -263,9 +277,11 @@ void http( char * url ){
     }
 
     fclose(html_page);
-    free(page);
 
+    free(page);
+    free(html_file);
     /****************************************************************/
+
     close(connection_socket);
 
     printf("HTML page collected!\n");
