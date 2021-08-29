@@ -114,10 +114,14 @@ char * getHTMLinformation( char * url, int connection_socket ){
 
     // Adiciona a extensão txt para armazenar as informações da página
     int length_url = strlen(url);
-    char * info_file = (char *) memrchr(url, '/', length_url) + 1;
-    strcat(info_file, ".txt");
 
-    printf(">>> %s\n>>>%s\n", url, info_file);
+    char * pt = (char *) memrchr(url, '/', length_url) + 1;
+    int len_name_html = strlen(pt);
+
+    char * info_file = (char *) calloc (len_name_html + 5, sizeof(char) );
+    strcpy(info_file, pt);
+    //info_file = (char *) memrchr(info_file, '/', length_url) + 1;
+    strcat(info_file, ".txt");
 
     char * page_info = (char*) calloc (500, 1*sizeof( char ) );
     char info_char;
@@ -157,19 +161,21 @@ char * getHTMLinformation( char * url, int connection_socket ){
 
 }
 
-int getHTMLlength(){
-    FILE * pFile = fopen ("infoHTML.txt", "r");
+int getHTMLlength( char * info_file ){
+    FILE * pFile = fopen ( info_file, "r" );
 
     char linha[1000];
-    int len = 0;
 
     while( fscanf( pFile, " %[^\n]%*c", linha ) != EOF ){
         char * substr = strstr(linha, "Content-Length: ");
         if(substr != NULL){
+
             int line_length = strlen(linha);
-            char * length_str = ( char * ) memchr (linha, ' ', line_length);
+            char * length_html = ( char * ) memchr (linha, ' ', line_length) + 1;
+
             fclose(pFile);
-            return atoi(length_str);
+
+            return atoi(length_html);
         }
 
     }
@@ -178,16 +184,21 @@ int getHTMLlength(){
     return -2;
 }
 
-void getHTML( int connection_socket, int len ){
+void getHTML( char * info_file, int len, int connection_socket ){
 
-    FILE * html_page = fopen ("page.html", "w");
+    int lenght_info_file = strlen(info_file);
+    char * html_file = (char *) calloc (lenght_info_file, sizeof(char));
+    strncpy( html_file, info_file, lenght_info_file - 4 );
+    // free(info_file);
+
+    FILE * html_page = fopen (html_file, "w");
 
     int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
 
     char * page = (char*) calloc (len + plus_size, sizeof( char ) );
     char string_from_page[10];
     int index = 0;
-    memset(&string_from_page, 0, 10*sizeof(string_from_page));
+    memset(&string_from_page, 0, 10*sizeof(char));
 
     while( 1 ){
         int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
@@ -199,11 +210,12 @@ void getHTML( int connection_socket, int len ){
         if( index % 10 != 0){
             break;
         }
-        memset(&string_from_page, 0, 10*sizeof(string_from_page));
+        memset(&string_from_page, 0, 10*sizeof(char));
     }
 
     fclose(html_page);
     free(page);
+    free(html_file);
 }
 
 void http( char * url ){
@@ -220,65 +232,11 @@ void http( char * url ){
     free(result);
 
     char * info_file = getHTMLinformation( url, connection_socket );
-    /****************************************************************/
-    // int len = getHTMLlength();
+    int len = getHTMLlength( info_file );
 
-    FILE * pFile = fopen (info_file, "r");
+    getHTML( info_file, len, connection_socket );
 
-    char linha[1000];
-    int len = 0;
-
-    while( fscanf( pFile, " %[^\n]%*c", linha ) != EOF ){
-
-        char * substr = strstr(linha, "Content-Length: ");
-
-        if(substr != NULL){
-            int line_length = strlen(linha);
-            char * length_str = ( char * ) memchr (linha, ' ', line_length);
-            len = atoi(length_str);
-            break;
-        }
-
-    }
-
-    fclose (pFile);
-    /****************************************************************/
-
-    /****************************************************************/
-    // getHTML( connection_socket, len );
-    int lenght_info_file = strlen(info_file);
-    char * html_file = (char *) calloc (lenght_info_file, sizeof(char));
-    memcpy( html_file, info_file, lenght_info_file - 4 );
-
-    FILE * html_page = fopen (html_file, "w");
-
-    int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
-    int index = 0;
-
-    char * page = (char*) calloc ( len + plus_size, sizeof( char ) );
-    char string_from_page[10];
-
-    memset( &string_from_page, 0, 10*sizeof(string_from_page) );
-
-    while( 1 ){
-        int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
-        index += page_number_of_bytes;
-        strcat(page, string_from_page);
-
-        fprintf (html_page, "%s", string_from_page);
-
-        if( index % 10 != 0){
-            break;
-        }
-        memset(&string_from_page, 0, 10*sizeof(string_from_page));
-    }
-
-    fclose(html_page);
-
-    free(page);
-    free(html_file);
-    /****************************************************************/
-
+    free(info_file);
     close(connection_socket);
 
     printf("HTML page collected!\n");
@@ -291,6 +249,9 @@ int main(int argc, char const *argv[]) {
     //www.gnu.org/software/libc/manual/html_node/Internet-Namespace.html
 
     char * url = "web.ist.utl.pt/luis.tarrataca/hello.html";
+    // Se a url começar com http:// dará erro, porque não está sendo tratado
+    // o inicio da url com protocolo
+
     char * server_URL = treatingURL( url );
 
     struct addrinfo * result = getWebsiteSocket( server_URL );
@@ -299,61 +260,70 @@ int main(int argc, char const *argv[]) {
     int connection_socket = conncetionWebsiteSocket( url, result );
     free(result);
 
-    getHTMLinformation( connection_socket );
-    //////////////////////////////////////////////////////
-    // int len = getHTMLlength();
+    char * info_file = getHTMLinformation( url, connection_socket );
+    /////////////////////////////////////////////////////////////
+    int len = getHTMLlength( info_file );
 
-    FILE * pFile = fopen ("infoHTML.txt", "r");
+    // FILE * pFile = fopen (info_file, "r");
+    //
+    // char linha[1000];
+    // int len = 0;
+    //
+    // while( fscanf( pFile, " %[^\n]%*c", linha ) != EOF ){
+    //
+    //     char * substr = strstr(linha, "Content-Length: ");
+    //
+    //     if(substr != NULL){
+    //         int line_length = strlen(linha);
+    //         char * length_str = ( char * ) memchr (linha, ' ', line_length);
+    //         len = atoi(length_str);
+    //         break;
+    //     }
+    //
+    // }
+    //
+    // fclose (pFile);
+    /////////////////////////////////////////////////////////////
 
-    char linha[1000];
-    int len = 0;
+    /////////////////////////////////////////////////////////////
+    getHTML( info_file, len, connection_socket );
+    // int lenght_info_file = strlen(info_file);
+    // char * html_file = (char *) calloc (lenght_info_file, sizeof(char));
+    // strncpy( html_file, info_file, lenght_info_file - 4 );
+    free(info_file);
+    //
+    // FILE * html_page = fopen (html_file, "w");
+    //
+    // int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
+    // int index = 0;
+    //
+    // char * page = (char*) calloc ( len + plus_size, sizeof( char ) );
+    // char string_from_page[10];
+    //
+    // memset( &string_from_page, 0, 10*sizeof(char) );
+    //
+    // while( 1 ){
+    //     int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
+    //     index += page_number_of_bytes;
+    //     strcat(page, string_from_page);
+    //
+    //     fprintf (html_page, "%s", string_from_page);
+    //
+    //     if( index % 10 != 0){
+    //         break;
+    //     }
+    //     memset(&string_from_page, 0, 10*sizeof(char));
+    // }
+    //
+    // fclose(html_page);
+    //
+    // free(page);
+    // free(html_file);
+    /////////////////////////////////////////////////////////////
 
-    while( fscanf( pFile, " %[^\n]%*c", linha ) != EOF ){
-
-        char * substr = strstr(linha, "Content-Length: ");
-
-        if(substr != NULL){
-            int line_length = strlen(linha);
-            char * length_str = ( char * ) memchr (linha, ' ', line_length);
-            len = atoi(length_str);
-            break;
-        }
-
-    }
-
-    fclose (pFile);
-    //////////////////////////////////////////////////////
-
-    //////////////////////////////////////////////////////
-    // getHTML( connection_socket, len );
-    FILE * html_page = fopen ("page.html", "w");
-
-    int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
-    int index = 0;
-
-    char * page = (char*) calloc ( len + plus_size, sizeof( char ) );
-    char string_from_page[10];
-
-    memset( &string_from_page, 0, 10*sizeof(string_from_page) );
-
-    while( 1 ){
-        int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
-        index += page_number_of_bytes;
-        strcat(page, string_from_page);
-
-        fprintf (html_page, "%s", string_from_page);
-
-        if( index % 10 != 0){
-            break;
-        }
-        memset(&string_from_page, 0, 10*sizeof(string_from_page));
-    }
-
-    fclose(html_page);
-    free(page);
-
-    //////////////////////////////////////////////////////
     close(connection_socket);
+
+    printf("HTML page collected!\n");
     return 0;
 }
 */

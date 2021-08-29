@@ -13,8 +13,8 @@ char * treatingURL( char * );
 struct addrinfo * getWebsiteSocket( char * );
 int conncetionWebsiteSocket( char * , struct addrinfo * );
 char * getHTMLinformation( char * , int );
-int getHTMLlength();
-void getHTML( int , int );
+int getHTMLlength( char * );
+void getHTML( char *, int , int );
 void http( char * );
 
 #endif
