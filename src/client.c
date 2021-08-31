@@ -79,7 +79,7 @@ void list( int mysocket ){
             for (int i = 1; i <= n; i++ ){
               site = recvString(mysocket);
               printf("[%d] (%d) %s\n", j, i, site);
-
+              free(site);
             }
         }
         j++;
@@ -134,7 +134,7 @@ void * readCommand( ShellCommands * history ){
 
     printf(":~$ ");
     scanf(" %[^\n]%*c", command);
-    
+
     insertCommand(command, history);
 
     return command;
@@ -175,6 +175,7 @@ int main( int argc, char *argv[] ){
     int mysocket = clientConnection(argv);
 
     if(mysocket == -1){
+        free(history);
         return -1;
     }
 
