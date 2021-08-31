@@ -24,10 +24,11 @@ int hashFunction( char * site ){
     return (sum + n) % 10;
 }
 
-LinkedList * createNode( char * site, Hash hashArray[] ){
+LinkedList * createNode( char * site, int content_length, Hash hashArray[] ){
 
     LinkedList * newnode = (LinkedList *) calloc(1, sizeof(LinkedList));
     newnode->site = site;
+    newnode->content_length = content_length;
 
     int index = hashFunction(site);
 
