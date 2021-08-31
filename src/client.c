@@ -18,7 +18,7 @@
 #include "../include/argsList.h"
 #include "../include/communication.h"
 
-#define MAX_LINE_SIZE 500
+#define MAX_LINE_SIZE 1000
 #define HASHTABLE_SIZE 10
 
 List * determineArguments(char * commandArgs){
@@ -85,9 +85,6 @@ void list( int mysocket ){
         j++;
     }
 
-
-
-
 }
 
 void exit_( int * run, ShellCommands * history ){
@@ -137,7 +134,7 @@ void * readCommand( ShellCommands * history ){
 
     printf(":~$ ");
     scanf(" %[^\n]%*c", command);
-
+    
     insertCommand(command, history);
 
     return command;

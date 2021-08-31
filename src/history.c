@@ -16,7 +16,10 @@ ShellCommands * createHistory(){
 void insertCommand( char * command, ShellCommands * history ){
 
     ListCommand * newnode = (ListCommand *) calloc(1, sizeof(ListCommand));
-    newnode->command = command;
+    //newnode->command = command;
+    int n = strlen(command) + 1;
+    newnode->command = (char *) calloc ( n, sizeof(char) );
+    strcpy(newnode->command, command);
 
     if(history->begin == NULL){
         history->begin = newnode;
@@ -36,8 +39,8 @@ void insertCommand( char * command, ShellCommands * history ){
 void printHistory( ShellCommands * history ){
 
     ListCommand * aux = history->begin;
-    int number_of_command = history->number_of_commands;
-
+    //int number_of_command = history->number_of_commands;
+    int number_of_command = 1;
     while( aux != NULL ){
         printf(" %d\t\b\b\b%s\n", number_of_command++, aux->command);
         aux = aux->next;
@@ -55,6 +58,7 @@ void removeHistory( ShellCommands * history ){
     for (int i = 0; i < n; i++){
 
         tmp = aux->next;
+        free(aux->command);
         free(aux);
         aux = tmp;
     }

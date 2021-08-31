@@ -123,7 +123,7 @@ char * getHTMLinformation( char * url, int connection_socket ){
     //info_file = (char *) memrchr(info_file, '/', length_url) + 1;
     strcat(info_file, ".txt");
 
-    char * page_info = (char*) calloc (500, 1*sizeof( char ) );
+    char * page_info = (char*) calloc (LENGTH_INFO_HTML, 1*sizeof( char ) );
     char info_char;
     int index = 0;
 
@@ -161,6 +161,8 @@ char * getHTMLinformation( char * url, int connection_socket ){
 
 }
 
+// Depois de coletar a informação eu não preciso continuar armazenando essas informações
+// Então, o arquivo de informação da página pode ser deletado
 int getHTMLlength( char * info_file ){
     FILE * pFile = fopen ( info_file, "r" );
 
@@ -181,7 +183,7 @@ int getHTMLlength( char * info_file ){
     }
 
     fclose(pFile);
-    return -2;
+    return CONTENT_LENGTH_NOT_FOUND;
 }
 
 void getHTML( char * info_file, int len, int connection_socket ){
@@ -195,28 +197,64 @@ void getHTML( char * info_file, int len, int connection_socket ){
 
     int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
 
-    char * page = (char*) calloc (len + plus_size, sizeof( char ) );
-    char string_from_page[10];
+    // char * page = (char*) calloc (len + plus_size, sizeof( char ) );
+    char string_from_page[N_BYTES_TO_RECEIVE];
     int index = 0;
-    memset(&string_from_page, 0, 10*sizeof(char));
+    memset(&string_from_page, 0, N_BYTES_TO_RECEIVE*sizeof(char));
 
     while( 1 ){
-        int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
+        int page_number_of_bytes = recv( connection_socket, &string_from_page, N_BYTES_TO_RECEIVE*sizeof(char), 0);
         index += page_number_of_bytes;
-        strcat(page, string_from_page);
+        // strcat(page, string_from_page);
 
         fprintf (html_page, "%s", string_from_page);
 
-        if( index % 10 != 0){
+        if( index % N_BYTES_TO_RECEIVE != 0){
             break;
         }
-        memset(&string_from_page, 0, 10*sizeof(char));
+        memset(&string_from_page, 0, N_BYTES_TO_RECEIVE*sizeof(char));
     }
 
     fclose(html_page);
-    free(page);
+    // free(page);
     free(html_file);
 }
+
+// Essa função é para ser usada quando a página não tiver a informção "content-length"
+// Ela vai pegar a página normalmente e retornar a quantidade de bytes lidos.
+int getHTML_With_No_Length_Found( char * info_file, int connection_socket ){
+
+    int lenght_info_file = strlen(info_file);
+    char * html_file = (char *) calloc (lenght_info_file, sizeof(char));
+    strncpy( html_file, info_file, lenght_info_file - 4 );
+
+    FILE * html_page = fopen (html_file, "w");
+
+    char string_from_page[N_BYTES_TO_RECEIVE];
+    int bytes_reads = 0;
+    memset(&string_from_page, 0, N_BYTES_TO_RECEIVE*sizeof(char));
+
+    while( 1 ){
+
+        int page_number_of_bytes = recv( connection_socket, &string_from_page, N_BYTES_TO_RECEIVE*sizeof(char), 0);
+        bytes_reads += page_number_of_bytes;
+
+        fprintf (html_page, "%s", string_from_page);
+
+        if( page_number_of_bytes == 0){
+            break;
+        }
+
+        memset(&string_from_page, 0, N_BYTES_TO_RECEIVE*sizeof(char));
+
+    }
+
+    fclose(html_page);
+    free(html_file);
+
+    return bytes_reads; // retorna  o número de bytes lidos
+}
+
 
 void http( char * url ){
 
@@ -234,7 +272,13 @@ void http( char * url ){
     char * info_file = getHTMLinformation( url, connection_socket );
     int len = getHTMLlength( info_file );
 
-    getHTML( info_file, len, connection_socket );
+    if(len == CONTENT_LENGTH_NOT_FOUND){
+        printf("No page content-length found: %d\n", len);
+        len = getHTML_With_No_Length_Found( info_file, connection_socket );
+    }else{
+        printf("Page content-length found: %d\n", len);
+      	getHTML( info_file, len, connection_socket );
+    }
 
     free(info_file);
     close(connection_socket);
