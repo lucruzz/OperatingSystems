@@ -256,7 +256,7 @@ int getHTML_With_No_Length_Found( char * info_file, int connection_socket ){
 }
 
 
-void http( char * url ){
+int http( char * url ){
 
     // Se a url começar com http:// dará erro, porque não está sendo tratado
     // o inicio da url com protocolo

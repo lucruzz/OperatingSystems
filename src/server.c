@@ -69,10 +69,13 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
                     if( node == NULL ){
                         // busca na internet
-                        http(str);
-                        
+                        int content_length = http(str);
+
                         // Inclui na hash
-                        createNode(str, hashArray);
+                        node = createNode(str, content_length, hashArray);
+
+                        // entrega o site para o cliente
+
                     }else{
                         // entrega o site para o cliente
                         puts("Page on proxy!");
