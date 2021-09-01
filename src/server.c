@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
@@ -18,6 +19,7 @@
 #include "../include/communication.h"
 #include "../include/hashServer.h"
 #include "../include/http.h"
+#include "../include/directories.h"
 
 void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
@@ -153,6 +155,11 @@ int main(int argc, char *argv[]){
     Hash hashArray[TABLE_SIZE];
     memset(&hashArray, 0, TABLE_SIZE*sizeof(Hash));
 
+    // Cria o diretório com as informações da página
+    if ( !makeDirectory(INFO_PAGES_DIRECTORY) ) { return 0; }
+
+    // Cria o diretório da proxy para armazenar as páginas que o cliente poderá baixar
+    if ( !makeDirectory(PROXY_DIRECTORY) ) { return 0; }
 
     while(run){
 
@@ -166,6 +173,11 @@ int main(int argc, char *argv[]){
     }
 
     removeHash(hashArray);
+
+    // remove os diretórios criados
+    removeDirectory(INFO_PAGES_DIRECTORY);
+    removeDirectory(PROXY_DIRECTORY);
+
     close(consocket);
     close(serverSocket);
     return EXIT_SUCCESS;
