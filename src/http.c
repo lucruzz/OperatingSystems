@@ -21,8 +21,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h> /* sockaddr_in */
 #include <netdb.h>
+#include <stdbool.h>
 
 #include "../include/http.h"
+#include "../include/directories.h"
 
 char * treatingURL( char * url ){
 
@@ -127,7 +129,13 @@ char * getHTMLinformation( char * url, int connection_socket ){
     char info_char;
     int index = 0;
 
-    FILE * pFile = fopen (info_file, "w");
+    // Configura string para criar arquivo dentro do diretório correto
+    char * path_to_info_file = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
+    strcpy( path_to_info_file, INFO_PAGES_DIRECTORY );
+    strcat( path_to_info_file, "/" );
+    strcat( path_to_info_file, info_file );
+
+    FILE * pFile = fopen (path_to_info_file, "w");
 
     while( 1 ){
 
@@ -153,7 +161,9 @@ char * getHTMLinformation( char * url, int connection_socket ){
     fprintf (pFile, "%s", page_info);
 
     fclose (pFile);
+
     free(page_info);
+    free(path_to_info_file);
 
     printf("Informations about page collected!\n");
 
@@ -164,7 +174,14 @@ char * getHTMLinformation( char * url, int connection_socket ){
 // Depois de coletar a informação eu não preciso continuar armazenando essas informações
 // Então, o arquivo de informação da página pode ser deletado
 int getHTMLlength( char * info_file ){
-    FILE * pFile = fopen ( info_file, "r" );
+
+    // Configura string para criar arquivo dentro do diretório correto
+    char * path_to_info_file = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
+    strcpy( path_to_info_file, INFO_PAGES_DIRECTORY );
+    strcat( path_to_info_file, "/" );
+    strcat( path_to_info_file, info_file );
+
+    FILE * pFile = fopen ( path_to_info_file, "r" );
 
     char linha[1000];
 
@@ -176,6 +193,9 @@ int getHTMLlength( char * info_file ){
             char * length_html = ( char * ) memchr (linha, ' ', line_length) + 1;
 
             fclose(pFile);
+            free(path_to_info_file);
+
+            removeFile(INFO_PAGES_DIRECTORY, info_file);
 
             return atoi(length_html);
         }
@@ -183,6 +203,10 @@ int getHTMLlength( char * info_file ){
     }
 
     fclose(pFile);
+    free(path_to_info_file);
+
+    removeFile(INFO_PAGES_DIRECTORY, info_file);
+
     return CONTENT_LENGTH_NOT_FOUND;
 }
 
@@ -193,7 +217,13 @@ void getHTML( char * info_file, int len, int connection_socket ){
     strncpy( html_file, info_file, lenght_info_file - 4 );
     // free(info_file);
 
-    FILE * html_page = fopen (html_file, "w");
+    // Configura string para criar arquivo dentro do diretório correto
+    char * path_to_html_file = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
+    strcpy( path_to_html_file, PROXY_DIRECTORY );
+    strcat( path_to_html_file, "/" );
+    strcat( path_to_html_file, html_file );
+
+    FILE * html_page = fopen (path_to_html_file, "w");
 
     int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
 
@@ -216,7 +246,7 @@ void getHTML( char * info_file, int len, int connection_socket ){
     }
 
     fclose(html_page);
-    // free(page);
+    free(path_to_html_file);
     free(html_file);
 }
 
@@ -228,7 +258,13 @@ int getHTML_With_No_Length_Found( char * info_file, int connection_socket ){
     char * html_file = (char *) calloc (lenght_info_file, sizeof(char));
     strncpy( html_file, info_file, lenght_info_file - 4 );
 
-    FILE * html_page = fopen (html_file, "w");
+    // Configura string para criar arquivo dentro do diretório correto
+    char * path_to_html_file = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
+    strcpy( path_to_html_file, PROXY_DIRECTORY );
+    strcat( path_to_html_file, "/" );
+    strcat( path_to_html_file, html_file );
+
+    FILE * html_page = fopen (path_to_html_file, "w");
 
     char string_from_page[N_BYTES_TO_RECEIVE];
     int bytes_reads = 0;
@@ -251,6 +287,7 @@ int getHTML_With_No_Length_Found( char * info_file, int connection_socket ){
 
     fclose(html_page);
     free(html_file);
+    free(path_to_html_file);
 
     return bytes_reads; // retorna  o número de bytes lidos
 }

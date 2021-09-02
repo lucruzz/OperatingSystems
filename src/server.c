@@ -176,7 +176,7 @@ int main(int argc, char *argv[]){
 
     // remove os diretórios criados
     removeDirectory(INFO_PAGES_DIRECTORY);
-    removeDirectory(PROXY_DIRECTORY);
+    // removeDirectory(PROXY_DIRECTORY);
 
     close(consocket);
     close(serverSocket);

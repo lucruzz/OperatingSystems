@@ -9,8 +9,10 @@
 
 #define INFO_PAGES_DIRECTORY "infoPage"
 #define PROXY_DIRECTORY "Proxy"
+#define LENGTH_DIR_PATH 50
 
 bool removeDirectory( char * );
+bool removeFile( char *, char * );
 bool makeDirectory( char * );
 
 #endif
