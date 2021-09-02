@@ -16,4 +16,4 @@ obj/server.o: src/server.c src/hashServer.c src/communication.c src/http.c src/d
 
 clean:
 	clear
-	rm obj/*.o bin/*
+	rm -r Proxy/ obj/*.o bin/*
