@@ -8,7 +8,7 @@
 #define __DIRECTORIES_H__
 
 #define INFO_PAGES_DIRECTORY "infoPage"
-#define PROXY_DIRECTORY "Proxy"
+#define PROXY_DIRECTORY "proxy"
 #define LENGTH_DIR_PATH 50
 
 bool removeDirectory( char * );

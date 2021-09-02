@@ -4,16 +4,6 @@
 /* Sistemas Operacionais                                */
 /* Trabalho de implementação de um Servidor Proxy       */
 /*======================================================*/
-// https://www.gta.ufrj.br/ensino/eel878/sockets/index.html
-// https://www.gnu.org/software/libc/manual/html_node/index.html#SEC_Contents
-// https://man7.org/linux/man-pages/man3/getaddrinfo.3.html
-
-// https://stackoverflow.com/questions/22077802/simple-c-example-of-doing-an-http-post-and-consuming-the-response
-// https://www.quora.com/What-exactly-is-r-in-the-C-language
-
-// https://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
-// https://datatracker.ietf.org/doc/html/rfc2616#section-7.1
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -195,7 +185,7 @@ int getHTMLlength( char * info_file ){
             fclose(pFile);
             free(path_to_info_file);
 
-            removeFile(INFO_PAGES_DIRECTORY, info_file);
+            // removeFile(INFO_PAGES_DIRECTORY, info_file);
 
             return atoi(length_html);
         }
@@ -205,7 +195,7 @@ int getHTMLlength( char * info_file ){
     fclose(pFile);
     free(path_to_info_file);
 
-    removeFile(INFO_PAGES_DIRECTORY, info_file);
+    // removeFile(INFO_PAGES_DIRECTORY, info_file);
 
     return CONTENT_LENGTH_NOT_FOUND;
 }
@@ -322,89 +312,6 @@ int http( char * url ){
 
     printf("HTML page collected!\n");
 
+    return len;
+
 }
-
-/*
-int main(int argc, char const *argv[]) {
-  // search web.ist.utl.pt/luis.tarrataca/hello.html www.gnu.org/software/libc/manual/html_node/Internet-Namespace.html
-    //www.gnu.org/software/libc/manual/html_node/Internet-Namespace.html
-
-    char * url = "web.ist.utl.pt/luis.tarrataca/hello.html";
-    // Se a url começar com http:// dará erro, porque não está sendo tratado
-    // o inicio da url com protocolo
-
-    char * server_URL = treatingURL( url );
-
-    struct addrinfo * result = getWebsiteSocket( server_URL );
-    free(server_URL);
-
-    int connection_socket = conncetionWebsiteSocket( url, result );
-    free(result);
-
-    char * info_file = getHTMLinformation( url, connection_socket );
-    /////////////////////////////////////////////////////////////
-    int len = getHTMLlength( info_file );
-
-    // FILE * pFile = fopen (info_file, "r");
-    //
-    // char linha[1000];
-    // int len = 0;
-    //
-    // while( fscanf( pFile, " %[^\n]%*c", linha ) != EOF ){
-    //
-    //     char * substr = strstr(linha, "Content-Length: ");
-    //
-    //     if(substr != NULL){
-    //         int line_length = strlen(linha);
-    //         char * length_str = ( char * ) memchr (linha, ' ', line_length);
-    //         len = atoi(length_str);
-    //         break;
-    //     }
-    //
-    // }
-    //
-    // fclose (pFile);
-    /////////////////////////////////////////////////////////////
-
-    /////////////////////////////////////////////////////////////
-    getHTML( info_file, len, connection_socket );
-    // int lenght_info_file = strlen(info_file);
-    // char * html_file = (char *) calloc (lenght_info_file, sizeof(char));
-    // strncpy( html_file, info_file, lenght_info_file - 4 );
-    free(info_file);
-    //
-    // FILE * html_page = fopen (html_file, "w");
-    //
-    // int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
-    // int index = 0;
-    //
-    // char * page = (char*) calloc ( len + plus_size, sizeof( char ) );
-    // char string_from_page[10];
-    //
-    // memset( &string_from_page, 0, 10*sizeof(char) );
-    //
-    // while( 1 ){
-    //     int page_number_of_bytes = recv( connection_socket, &string_from_page, 10*sizeof(char), 0);
-    //     index += page_number_of_bytes;
-    //     strcat(page, string_from_page);
-    //
-    //     fprintf (html_page, "%s", string_from_page);
-    //
-    //     if( index % 10 != 0){
-    //         break;
-    //     }
-    //     memset(&string_from_page, 0, 10*sizeof(char));
-    // }
-    //
-    // fclose(html_page);
-    //
-    // free(page);
-    // free(html_file);
-    /////////////////////////////////////////////////////////////
-
-    close(connection_socket);
-
-    printf("HTML page collected!\n");
-    return 0;
-}
-*/

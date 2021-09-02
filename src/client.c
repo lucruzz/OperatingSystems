@@ -5,21 +5,30 @@
 /* Trabalho de implementação de um Servidor Proxy       */
 /*======================================================*/
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <errno.h>
 
 #include "../include/history.h"
 #include "../include/argsList.h"
+#include "../include/directories.h"
 #include "../include/communication.h"
 
+// Rever defines
 #define MAX_LINE_SIZE 1000
 #define HASHTABLE_SIZE 10
+
+typedef struct ClientInformation{
+    int socket;
+    int port;
+    char * shared_directory;
+}ClientInformation;
 
 List * determineArguments(char * commandArgs){
 
@@ -38,7 +47,7 @@ List * determineArguments(char * commandArgs){
 }
 
 // Busca n sites
-void search(char *command, int mysocket){
+void search(char *command, char *shared_directory, int mysocket){
 
     puts("> Search");
 
@@ -47,6 +56,9 @@ void search(char *command, int mysocket){
     int n = commandList->n_elements;
     // Envia o número de argumentos (sites)
     sendInt(n, mysocket);
+
+    // Envia o diretório compartilhado a que deseja receber os dados
+    sendString(shared_directory, mysocket);
 
     if(n){
         Node * aux = commandList->begin;
@@ -93,7 +105,7 @@ void exit_( int * run, ShellCommands * history ){
     puts("Client says bye bye!");
 }
 
-int processCommand(char * command, int * run, ShellCommands * history, int mysocket){
+int processCommand(char * command, int * run, ShellCommands * history, int mysocket, char * shared_directory ){
 
     char * strings = strtok(command, " ");
 
@@ -102,7 +114,7 @@ int processCommand(char * command, int * run, ShellCommands * history, int mysoc
     if( !strcmp( strings, SEARCH ) ){
         command_id = SEARCH_ID;
         sendInt(command_id, mysocket); // Envia o ID do comando a ser processado
-        search(strings, mysocket);
+        search(strings, shared_directory, mysocket);
 
     }else if( !strcmp( strings, LIST ) ){
         command_id = LIST_ID;
@@ -140,7 +152,7 @@ void * readCommand( ShellCommands * history ){
     return command;
 }
 
-int clientConnection(char *argv[]){
+int clientConnection( int port ){
 
     int mysocket;
     struct sockaddr_in dest;
@@ -150,7 +162,7 @@ int clientConnection(char *argv[]){
     memset(&dest, 0, sizeof(dest));               /* zero the struct */
     dest.sin_family = AF_INET;
     dest.sin_addr.s_addr = htonl(INADDR_LOOPBACK);/* set destination IP number - localhost, 127.0.0.1*/
-    dest.sin_port = htons(  atoi( argv[ 1 ]) );   /* set destination port number */
+    dest.sin_port = htons( port );   /* set destination port number */
 
     int connectResult = connect(mysocket, (struct sockaddr *)&dest, sizeof(struct sockaddr_in));
 
@@ -164,15 +176,22 @@ int clientConnection(char *argv[]){
 
 int main( int argc, char *argv[] ){
 
-    if( argc != 2 ){
+    if( argc != 3 ){
         printf("USAGE: server port_number\n");
         return EXIT_FAILURE;
     }
 
+    int port = atoi( argv[ 2 ] );
+
+    char * shared_directory = ( char * ) calloc ( 20, sizeof(char) );
+    strcpy( shared_directory, argv[ 1 ] );
+
     char * command;
     int run = TRUE;
     ShellCommands * history = createHistory();
-    int mysocket = clientConnection(argv);
+    int mysocket = clientConnection(port);
+
+    printf("[ PORTA ] %d\n[ SHARED DIRECTORY ] %s\n[ CLIENT SOCKET ] %d\n", port, shared_directory, mysocket);
 
     if(mysocket == -1){
         free(history);
@@ -183,12 +202,13 @@ int main( int argc, char *argv[] ){
 
         command = readCommand(history);
 
-        int command_id = processCommand(command, &run, history, mysocket);
+        int command_id = processCommand(command, &run, history, mysocket, shared_directory);
 
         free(command);
 
     }
 
     close(mysocket);
+    free(shared_directory);
     return EXIT_SUCCESS;
 }

@@ -61,6 +61,7 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
             // Recebe o número de argumentos (sites) a serem processados
             int n = recvInt(consocket);
+            char * send_to_directory = recvString(consocket);
 
             if(n){
                 for( int i = 0; i < n; i++ ){
@@ -78,6 +79,39 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
                         // entrega o site para o cliente
 
+                        // esse trecho aqui pode ser generalizado, porque também é uma parte no http.c
+                        // aqui eu pego o nome do arquivo que foi salvo na proxy
+                        char * pt = memrchr(str, '/', strlen(str)) + 1;
+                        char * file_to_send = (char *) calloc (strlen(pt) + 1, sizeof(char) );
+                        strcpy(file_to_send, pt);
+
+                        printf("Sending %s file to client...\n", pt);
+
+                        // Configura string para criar arquivo dentro do diretório correto
+                        char * path_to_html_file_on_proxy = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
+                        strcpy( path_to_html_file_on_proxy, PROXY_DIRECTORY );
+                        strcat( path_to_html_file_on_proxy, "/" );
+                        strcat( path_to_html_file_on_proxy, file_to_send );
+
+                        int number_of_bytes_reads = 0;
+                        int send_n_bytes = 10;
+                        char string_line_from_file[send_n_bytes];
+
+                        FILE * p = fopen(path_to_html_file_on_proxy, "r");
+                        memset(&string_line_from_file, 0, send_n_bytes*sizeof(char));
+
+                        while ( number_of_bytes_reads != content_length ){
+
+                            fgets(string_line_from_file, send_n_bytes, p);
+                            number_of_bytes_reads += strlen(string_line_from_file);
+                            memset(&string_line_from_file, 0, send_n_bytes*sizeof(char));
+
+                        }
+                        printf("\nFile %s sended to %s\n",  path_to_html_file_on_proxy, send_to_directory);
+                        fclose(p);
+                        free(file_to_send);
+                        free(path_to_html_file_on_proxy);
+
                     }else{
                         // entrega o site para o cliente
                         puts("Page on proxy!");
@@ -86,6 +120,8 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
                 }
             }
+
+            free(send_to_directory);
 
             break;
 
@@ -156,10 +192,10 @@ int main(int argc, char *argv[]){
     memset(&hashArray, 0, TABLE_SIZE*sizeof(Hash));
 
     // Cria o diretório com as informações da página
-    if ( !makeDirectory(INFO_PAGES_DIRECTORY) ) { return 0; }
+    // if ( !makeDirectory(INFO_PAGES_DIRECTORY) ) { return 0; }
 
     // Cria o diretório da proxy para armazenar as páginas que o cliente poderá baixar
-    if ( !makeDirectory(PROXY_DIRECTORY) ) { return 0; }
+    // if ( !makeDirectory(PROXY_DIRECTORY) ) { return 0; }
 
     while(run){
 
@@ -175,7 +211,7 @@ int main(int argc, char *argv[]){
     removeHash(hashArray);
 
     // remove os diretórios criados
-    removeDirectory(INFO_PAGES_DIRECTORY);
+    // removeDirectory(INFO_PAGES_DIRECTORY);
     // removeDirectory(PROXY_DIRECTORY);
 
     close(consocket);
