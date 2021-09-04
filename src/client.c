@@ -23,6 +23,7 @@
 // Rever defines
 #define MAX_LINE_SIZE 1000
 #define HASHTABLE_SIZE 10
+#define N_BYTES_TO_RECV 10
 
 typedef struct ClientInformation{
     int socket;
@@ -92,15 +93,19 @@ void search(char *command, char *shared_directory, int mysocket){
             free(page_filename);
             free(full_path_file);
 
-            char * page_recv;
+            char * page_recv = (char *) calloc(N_BYTES_TO_RECV, sizeof(char));
+            // char * page_recv;
             int bytes_recv = 0;
 
             while(bytes_recv != n_bytes_to_recv){
-                  page_recv = recvString(mysocket);
+                  //page_recv = recvString(mysocket);
+                  recvString2(page_recv, mysocket);
                   fputs(page_recv, p);
                   bytes_recv += strlen(page_recv);
-                  free(page_recv);
+                  // free(page_recv);
+                  memset(page_recv, 0, sizeof(char));
             }
+            free(page_recv);
             fclose(p);
             printf("Page received from proxy!\n");
 
