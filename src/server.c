@@ -79,6 +79,9 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
                         // entrega o site para o cliente
 
+                        // Envia o número de bytes da página
+                        sendInt(content_length, consocket);
+
                         // esse trecho aqui pode ser generalizado, porque também é uma parte no http.c
                         // aqui eu pego o nome do arquivo que foi salvo na proxy
                         char * pt = memrchr(str, '/', strlen(str)) + 1;
@@ -86,6 +89,9 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
                         strcpy(file_to_send, pt);
 
                         printf("Sending %s file to client...\n", pt);
+
+                        // Envio o nome da página
+                        sendString(file_to_send, consocket);
 
                         // Configura string para criar arquivo dentro do diretório correto
                         char * path_to_html_file_on_proxy = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
@@ -104,6 +110,7 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
                             fgets(string_line_from_file, send_n_bytes, p);
                             number_of_bytes_reads += strlen(string_line_from_file);
+                            sendString(string_line_from_file, consocket);
                             memset(&string_line_from_file, 0, send_n_bytes*sizeof(char));
 
                         }

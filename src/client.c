@@ -63,9 +63,47 @@ void search(char *command, char *shared_directory, int mysocket){
     if(n){
         Node * aux = commandList->begin;
 
+        // Pego o tamanho do caminho do diretório
+        int length_str_shared_directory = strlen(shared_directory);
+
         for( int i = 0; i < n; i++ ){
             // Envia o argumento (site) para o Servidor
             sendString(aux->argument, mysocket);
+
+            // Recebo a quantidade de bytes da página a ser recebida
+            int n_bytes_to_recv = recvInt(mysocket);
+
+            // Recebo o nome da paǵina
+            char * page_filename = recvString(mysocket);
+            // Pego o tamanho do nome da página
+            int length_str_page_filename = strlen(page_filename);
+
+            int total_full_length_to_file = length_str_shared_directory + length_str_page_filename;
+
+            // Aloco uma string para o tamanho total para o arquivo "no lado do" cliente
+            char * full_path_file = ( char * ) calloc(total_full_length_to_file + 2, sizeof(char));
+            strcat(full_path_file, shared_directory);
+            strcat(full_path_file, "/");
+            strcat(full_path_file, page_filename);
+
+            // Abro o arquivo para armazenar a página "no lado" cliente
+            FILE * p = fopen(full_path_file, "w");
+
+            free(page_filename);
+            free(full_path_file);
+
+            char * page_recv;
+            int bytes_recv = 0;
+
+            while(bytes_recv != n_bytes_to_recv){
+                  page_recv = recvString(mysocket);
+                  fputs(page_recv, p);
+                  bytes_recv += strlen(page_recv);
+                  free(page_recv);
+            }
+            fclose(p);
+            printf("Page received from proxy!\n");
+
             aux = aux->next;
         }
         free(aux);
