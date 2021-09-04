@@ -46,3 +46,9 @@ char * recvString( int socket ){
     recv(socket, string, len_str, 0);
     return string;
 }
+
+void recvString2( char * string, int socket ){
+    int len_str = 0;
+    len_str = recvInt(socket);
+    recv(socket, string, len_str, 0);
+}

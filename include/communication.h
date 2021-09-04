@@ -32,4 +32,8 @@ double recvDouble( int socket );
 void sendString( char* string, int socket );
 char * recvString( int socket );
 
+// Essa função recvString2 ela não aloca memória
+// Útil para usar no recebimento das mensagens pelo cliente
+void recvString2( char *, int );
+
 #endif
