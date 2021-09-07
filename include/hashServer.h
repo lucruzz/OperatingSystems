@@ -13,6 +13,7 @@
 typedef struct LinkedList{
     char * site;
     int content_length;
+    time_t creation_time;
     struct LinkedList * next;
 }LinkedList;
 
@@ -24,6 +25,7 @@ typedef struct Hash{
 int hashFunction( char * );
 LinkedList * createNode( char * , int, Hash [] );
 void removeHash( Hash [] );
+void remove_Hash_Node ( LinkedList *, int, Hash [] );
 void printHash( Hash [] );
 LinkedList * searchInHash( char * , Hash [] );
 

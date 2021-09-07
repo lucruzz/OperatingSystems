@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <signal.h>
+#include <time.h>
 
 #include "../include/hashServer.h"
 
@@ -29,6 +32,7 @@ LinkedList * createNode( char * site, int content_length, Hash hashArray[] ){
     LinkedList * newnode = (LinkedList *) calloc(1, sizeof(LinkedList));
     newnode->site = site;
     newnode->content_length = content_length;
+    newnode->creation_time = time( NULL );
 
     int index = hashFunction(site);
 
@@ -100,4 +104,22 @@ void removeHash( Hash hashArray[] ){
         }
         i++;
     }
+}
+
+
+void remove_Hash_Node ( LinkedList * previous_node, int index, Hash hashArray[] ){
+
+    LinkedList * node;
+
+    if( previous_node == hashArray[index].begin ){
+        node = previous_node;
+        hashArray[index].begin = previous_node->next;
+    }else{
+        node = previous_node->next;
+        previous_node->next = node->next;
+    }
+    hashArray[index].n_elements--;
+    free(node->site);
+    free(node);
+
 }

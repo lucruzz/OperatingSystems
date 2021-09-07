@@ -15,11 +15,17 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <signal.h>
 
 #include "../include/communication.h"
 #include "../include/hashServer.h"
 #include "../include/http.h"
 #include "../include/directories.h"
+
+#define TIME_INTERVAL 20
+#define MAX_TIME 15
+
+Hash hashArray[TABLE_SIZE];
 
 void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
@@ -185,6 +191,43 @@ int connectionSocket(int serverSocket){
     return consocket;
 }
 
+void verifyHashtable( int signum ){
+
+  int i = 0;
+
+  while( i < TABLE_SIZE ){
+
+    if( hashArray[i].begin != NULL ){
+
+        LinkedList * node = hashArray[i].begin;
+        LinkedList * aux = node;
+
+        while( node != NULL ){
+
+            time_t now = time( NULL );
+            char * timeString = ctime( &now );
+            double timeDifference = difftime( now, node->creation_time );
+
+            if(timeDifference > MAX_TIME){
+                remove_Hash_Node(aux, i, hashArray);
+                printf("\t[(%d) Node removed!]\n", i);
+                printf("Current time: %s\n", timeString);
+              	//printf("Time difference: %f\n", timeDifference);
+            }
+
+            aux = node;
+            node = node->next;
+        }
+
+    }
+    i++;
+
+  }
+
+	alarm( TIME_INTERVAL );
+
+}
+
 int main(int argc, char *argv[]){
 
     if( argc != 2 ){
@@ -192,10 +235,14 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
     }
 
+    signal( SIGALRM, verifyHashtable ); // Register signal handler
+
+    alarm( TIME_INTERVAL ); // Scheduled alarm after 20 seconds
+
     int run = TRUE;
     int serverSocket = serverConection(argv);
     int consocket = connectionSocket(serverSocket);
-    Hash hashArray[TABLE_SIZE];
+
     memset(&hashArray, 0, TABLE_SIZE*sizeof(Hash));
 
     // Cria o diretório com as informações da página
