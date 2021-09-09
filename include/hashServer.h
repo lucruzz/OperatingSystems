@@ -25,7 +25,7 @@ typedef struct Hash{
 int hashFunction( char * );
 LinkedList * createNode( char * , int, Hash [] );
 void removeHash( Hash [] );
-void remove_Hash_Node ( LinkedList *, int, Hash [] );
+LinkedList * remove_Hash_Node ( LinkedList *, LinkedList*, int, Hash [] );
 void printHash( Hash [] );
 LinkedList * searchInHash( char * , Hash [] );
 

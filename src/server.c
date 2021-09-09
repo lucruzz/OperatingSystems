@@ -205,16 +205,19 @@ void verifyHashtable( int signum ){
         while( node != NULL ){
 
             time_t now = time( NULL );
-            char * timeString = ctime( &now );
             double timeDifference = difftime( now, node->creation_time );
 
             if(timeDifference > MAX_TIME){
-                remove_Hash_Node(aux, i, hashArray);
+
+                node = remove_Hash_Node(aux, node, i, hashArray);
+                char * timeString = ctime( &now );
+
                 printf("\t[(%d) Node removed!]\n", i);
                 printf("Current time: %s\n", timeString);
               	//printf("Time difference: %f\n", timeDifference);
-            }
 
+                continue;
+            }
             aux = node;
             node = node->next;
         }

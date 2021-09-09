@@ -107,19 +107,20 @@ void removeHash( Hash hashArray[] ){
 }
 
 
-void remove_Hash_Node ( LinkedList * previous_node, int index, Hash hashArray[] ){
+LinkedList * remove_Hash_Node ( LinkedList * previous_node, LinkedList * node, int index, Hash hashArray[] ){
 
-    LinkedList * node;
-
-    if( previous_node == hashArray[index].begin ){
-        node = previous_node;
-        hashArray[index].begin = previous_node->next;
+    LinkedList * aux;
+    if( previous_node == node ){
+        hashArray[index].begin = node->next;
+        aux = hashArray[index].begin;
     }else{
-        node = previous_node->next;
         previous_node->next = node->next;
+        aux = previous_node->next;
     }
+
     hashArray[index].n_elements--;
     free(node->site);
     free(node);
 
+    return aux;
 }
