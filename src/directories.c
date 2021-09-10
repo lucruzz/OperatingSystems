@@ -31,6 +31,8 @@ bool removeFile( char * directory_name, char * filename ){
 
     int error = unlinkat(dirfd(p), filename, 0);
 
+    closedir( p );
+
     if( !error ){
         printf("File %s removed!\n", filename);
         return true;
