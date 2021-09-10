@@ -23,7 +23,7 @@
 #include "../include/directories.h"
 
 #define TIME_INTERVAL 20
-#define MAX_TIME 15
+#define MAX_TIME 120
 
 Hash hashArray[TABLE_SIZE];
 
@@ -106,7 +106,7 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
                         strcat( path_to_html_file_on_proxy, file_to_send );
 
                         int number_of_bytes_reads = 0;
-                        int send_n_bytes = 10;
+                        int send_n_bytes = N_BYTES_TO_SEND;
                         char string_line_from_file[send_n_bytes];
 
                         FILE * p = fopen(path_to_html_file_on_proxy, "r");
@@ -209,12 +209,26 @@ void verifyHashtable( int signum ){
 
             if(timeDifference > MAX_TIME){
 
+                char * pt = memrchr(node->site, '/', strlen(node->site)) + 1;
+                char * file = (char *) calloc (strlen(pt) + 1, sizeof(char) );
+                char * info_file = (char *) calloc (strlen(pt) + 6, sizeof(char) );
+                strcpy(file, pt);
+                strcpy(info_file, pt);
+                strcat(info_file, ".txt");
+
                 node = remove_Hash_Node(aux, node, i, hashArray);
                 char * timeString = ctime( &now );
 
-                printf("\t[(%d) Node removed!]\n", i);
+                removeFile( PROXY_DIRECTORY, file);
+                removeFile( INFO_PAGES_DIRECTORY, info_file);
+
+                printf("\t[file %s removed from proxy!]\n", file);
                 printf("Current time: %s\n", timeString);
+
               	//printf("Time difference: %f\n", timeDifference);
+
+                free(file);
+                free(info_file);
 
                 continue;
             }

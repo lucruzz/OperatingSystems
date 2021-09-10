@@ -23,7 +23,6 @@
 // Rever defines
 #define MAX_LINE_SIZE 1000
 #define HASHTABLE_SIZE 10
-#define N_BYTES_TO_RECV 10
 
 typedef struct ClientInformation{
     int socket;

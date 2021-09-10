@@ -8,6 +8,8 @@
 #define __COMMUNICATION_H__
 
 #define MAXRCVLEN 500
+#define N_BYTES_TO_RECV 10
+#define N_BYTES_TO_SEND 10
 
 #define TRUE 1
 #define FALSE 0
