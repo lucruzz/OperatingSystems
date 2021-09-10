@@ -215,7 +215,9 @@ void getHTML( char * info_file, int len, int connection_socket ){
 
     FILE * html_page = fopen (path_to_html_file, "w");
 
-    int plus_size = 10 - (len % 10);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
+    printf("\tLENGTH HTML PAGE: %d\n", len);
+
+    int plus_size = len - (len % N_BYTES_TO_RECEIVE);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
 
     // char * page = (char*) calloc (len + plus_size, sizeof( char ) );
     char string_from_page[N_BYTES_TO_RECEIVE];
@@ -229,7 +231,7 @@ void getHTML( char * info_file, int len, int connection_socket ){
 
         fprintf (html_page, "%s", string_from_page);
 
-        if( index % N_BYTES_TO_RECEIVE != 0){
+        if( index % len == 0){
             break;
         }
         memset(&string_from_page, 0, N_BYTES_TO_RECEIVE*sizeof(char));
