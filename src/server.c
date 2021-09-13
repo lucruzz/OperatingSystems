@@ -83,6 +83,9 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
                         // Inclui na hash
                         node = createNode(str, content_length, hashArray);
 
+                        printf("\t=== HTML file available on proxy ===\n");
+                        printf("\t      %s", ctime(&node->creation_time));
+
                         // entrega o site para o cliente
 
                         // Envia o número de bytes da página
@@ -94,7 +97,7 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
                         char * file_to_send = (char *) calloc (strlen(pt) + 1, sizeof(char) );
                         strcpy(file_to_send, pt);
 
-                        printf("Sending %s file to client...\n", pt);
+                        printf("\t=== Sending %s file to client ===\n", pt);
 
                         // Envio o nome da página
                         sendString(file_to_send, consocket);
@@ -112,22 +115,27 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
                         FILE * p = fopen(path_to_html_file_on_proxy, "r");
                         memset(&string_line_from_file, 0, send_n_bytes*sizeof(char));
 
-                        while ( number_of_bytes_reads != content_length ){
 
+                        while ( 1 ){
                             fgets(string_line_from_file, send_n_bytes, p);
                             number_of_bytes_reads += strlen(string_line_from_file);
                             sendString(string_line_from_file, consocket);
+
+                            if( number_of_bytes_reads % content_length == 0 ){
+                                break;
+                            }
+
                             memset(&string_line_from_file, 0, send_n_bytes*sizeof(char));
 
                         }
-                        printf("\nFile %s sended to %s\n",  path_to_html_file_on_proxy, send_to_directory);
+                        printf("\t=== File %s sended to %s ===\n",  path_to_html_file_on_proxy, send_to_directory);
                         fclose(p);
                         free(file_to_send);
                         free(path_to_html_file_on_proxy);
 
                     }else{
                         // entrega o site para o cliente
-                        puts("Page on proxy!");
+                        puts("\t=== Page on proxy! ===");
                         free(str);
                     }
 
@@ -158,20 +166,20 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
 int serverConection(char * argv[]){
 
-    struct sockaddr_in serv; /* socket info about our server */
-    int serverSocket;        /* socket used to listen for incoming connections */
+    struct sockaddr_in serv; // socket info about our server
+    int serverSocket;        // socket used to listen for incoming connections
 
-    memset(&serv, 0, sizeof(serv));             /* zero the struct before filling the fields */
-    serv.sin_family = AF_INET;                  /* set the type of connection to TCP/IP */
-    serv.sin_addr.s_addr = htonl(INADDR_ANY);   /* set our address to any interface */
-    serv.sin_port = htons( atoi( argv[ 1 ] ) ); /* set the server port number */
+    memset(&serv, 0, sizeof(serv));             // zero the struct before filling the fields
+    serv.sin_family = AF_INET;                  // set the type of connection to TCP/IP
+    serv.sin_addr.s_addr = htonl(INADDR_ANY);   // set our address to any interface
+    serv.sin_port = htons( atoi( argv[ 1 ] ) ); // set the server port number
 
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 
-    /* bind serv information to mysocket */
+    // bind serv information to mysocket
     bind(serverSocket, (struct sockaddr *)&serv, sizeof(struct sockaddr));
 
-    /* start listening, allowing a queue of up to 1 pending connection */
+    // start listening, allowing a queue of up to 1 pending connection
     listen(serverSocket, 1);
 
     printf("Server is waiting for connections on port:%s\n", argv[ 1 ] );
@@ -181,7 +189,7 @@ int serverConection(char * argv[]){
 
 int connectionSocket(int serverSocket){
 
-    struct sockaddr_in dest; /* socket info about the machine connecting to us */
+    struct sockaddr_in dest; // socket info about the machine connecting to us
     socklen_t socksize = sizeof(struct sockaddr_in);
 
     int consocket = accept(serverSocket, (struct sockaddr *)&dest, &socksize);

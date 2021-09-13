@@ -9,12 +9,13 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <netinet/in.h> /* sockaddr_in */
+#include <netinet/in.h> // sockaddr_in
 #include <netdb.h>
 #include <stdbool.h>
 
 #include "../include/http.h"
 #include "../include/directories.h"
+#include "../include/communication.h"
 
 char * treatingURL( char * url ){
 
@@ -32,7 +33,7 @@ char * treatingURL( char * url ){
 
 struct addrinfo * getWebsiteSocket( char * url ){
 
-    struct sockaddr_in server_add; /*structure for handling internet addresses*/
+    struct sockaddr_in server_add; // structure for handling internet addresses
     struct sockaddr * destinationSocket;
     struct addrinfo hints;
     struct addrinfo * result;
@@ -41,7 +42,7 @@ struct addrinfo * getWebsiteSocket( char * url ){
     hints.ai_family = AF_INET; // 2
     hints.ai_protocol = SOCK_STREAM; // 1
 
-    /*returns one or more addrinfo structures, each of which contains an Internet address*/
+    // returns one or more addrinfo structures, each of which contains an Internet address
     int success = getaddrinfo( url, NULL, &hints, &result );
 
     if( success != 0 ){ //getaddrinfo returns 0 if well succeeded
@@ -58,12 +59,9 @@ struct addrinfo * getWebsiteSocket( char * url ){
         return 0;
     }
 
-    printf("IP Address: %s\n", hostname);
+    printf("\tIP Address: %s\n", hostname);
 
     return result;
-    //destinationSocket = result->ai_addr;
-
-    //return destinationSocket;
 }
 
 int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
@@ -83,11 +81,11 @@ int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
         perror("Connection error");
         exit(EXIT_FAILURE);
     }else{
-        puts("Site connection accepted!");
+        puts("\tSite connection accepted!");
     }
 
-    char request[1000];
-    memset(request, 0, 1000*sizeof(char));
+    char request[HTTP_REQUEST_SIZE];
+    memset(request, 0, HTTP_REQUEST_SIZE*sizeof(char));
     strcat(request, "GET http://");
     strcat(request, url);
     strcat(request, " HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n");
@@ -96,7 +94,7 @@ int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
 
     int number_of_bytes = strlen( request );//* sizeof( char );
 
-    puts("Sending request...");
+    puts("\tSending request...");
     send( connection_socket, request, number_of_bytes, 0 );
 
     return connection_socket;
@@ -110,12 +108,12 @@ char * getHTMLinformation( char * url, int connection_socket ){
     char * pt = (char *) memrchr(url, '/', length_url) + 1;
     int len_name_html = strlen(pt);
 
-    char * info_file = (char *) calloc (len_name_html + 5, sizeof(char) );
+    char * info_file = (char *) calloc (len_name_html + 6, sizeof(char) );
     strcpy(info_file, pt);
     //info_file = (char *) memrchr(info_file, '/', length_url) + 1;
     strcat(info_file, ".txt");
 
-    char * page_info = (char*) calloc (LENGTH_INFO_HTML, 1*sizeof( char ) );
+    char * page_info = (char*) calloc (LENGTH_STR_INFO_HTML, sizeof( char ) );
     char info_char;
     int index = 0;
 
@@ -125,7 +123,7 @@ char * getHTMLinformation( char * url, int connection_socket ){
     strcat( path_to_info_file, "/" );
     strcat( path_to_info_file, info_file );
 
-    FILE * pFile = fopen (path_to_info_file, "w");
+    FILE * pFile = fopen (path_to_info_file, "a");
 
     while( 1 ){
 
@@ -155,7 +153,7 @@ char * getHTMLinformation( char * url, int connection_socket ){
     free(page_info);
     free(path_to_info_file);
 
-    printf("Informations about page collected!\n");
+    printf("\tInformations about page collected!\n");
 
     return info_file;
 
@@ -173,7 +171,7 @@ int getHTMLlength( char * info_file ){
 
     FILE * pFile = fopen ( path_to_info_file, "r" );
 
-    char linha[1000];
+    char linha[HTML_INFO_STR_SIZE];
 
     while( fscanf( pFile, " %[^\n]%*c", linha ) != EOF ){
         char * substr = strstr(linha, "Content-Length: ");
@@ -215,31 +213,35 @@ void getHTML( char * info_file, int len, int connection_socket ){
 
     FILE * html_page = fopen (path_to_html_file, "w");
 
-    printf("\tLENGTH HTML PAGE: %d\n", len);
+    //printf("\tLENGTH HTML PAGE: %d\n", len);
 
-    int plus_size = len - (len % N_BYTES_TO_RECEIVE);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
+    //int plus_size = len - (len % N_BYTES_TO_RECV);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
 
-    // char * page = (char*) calloc (len + plus_size, sizeof( char ) );
-    char string_from_page[N_BYTES_TO_RECEIVE];
+    // char string_from_page[N_BYTES_TO_RECV];
+    char * string_from_page = (char*) calloc ( N_BYTES_TO_RECV + 1, sizeof( char ) );
     int index = 0;
-    memset(&string_from_page, 0, N_BYTES_TO_RECEIVE*sizeof(char));
+    // memset(&string_from_page, 0, sizeof(char));
+    //memset(string_from_page, 0, N_BYTES_TO_RECV*sizeof(char) + 1);
 
     while( 1 ){
-        int page_number_of_bytes = recv( connection_socket, &string_from_page, N_BYTES_TO_RECEIVE*sizeof(char), 0);
-        index += page_number_of_bytes;
-        // strcat(page, string_from_page);
+        // int page_number_of_bytes = recv( connection_socket, &string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
+        int page_number_of_bytes = recv( connection_socket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
 
-        fprintf (html_page, "%s", string_from_page);
+        index += page_number_of_bytes;
+        //fprintf (html_page, "%s", string_from_page);
+        fputs(string_from_page, html_page);
 
         if( index % len == 0){
             break;
         }
-        memset(&string_from_page, 0, N_BYTES_TO_RECEIVE*sizeof(char));
+        // memset(&string_from_page, 0, sizeof(char));
+        memset(string_from_page, 0, N_BYTES_TO_RECV*sizeof(char) + 1);
     }
 
     fclose(html_page);
     free(path_to_html_file);
     free(html_file);
+    free(string_from_page);
 }
 
 // Essa função é para ser usada quando a página não tiver a informção "content-length"
@@ -258,22 +260,23 @@ int getHTML_With_No_Length_Found( char * info_file, int connection_socket ){
 
     FILE * html_page = fopen (path_to_html_file, "w");
 
-    char string_from_page[N_BYTES_TO_RECEIVE];
+    char string_from_page[N_BYTES_TO_RECV];
     int bytes_reads = 0;
-    memset(&string_from_page, 0, N_BYTES_TO_RECEIVE*sizeof(char));
+    memset(&string_from_page, 0, N_BYTES_TO_RECV*sizeof(char));
 
     while( 1 ){
 
-        int page_number_of_bytes = recv( connection_socket, &string_from_page, N_BYTES_TO_RECEIVE*sizeof(char), 0);
+        int page_number_of_bytes = recv( connection_socket, &string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
         bytes_reads += page_number_of_bytes;
 
-        fprintf (html_page, "%s", string_from_page);
+        //fprintf (html_page, "%s", string_from_page);
+        fputs(string_from_page, html_page);
 
         if( page_number_of_bytes == 0){
             break;
         }
 
-        memset(&string_from_page, 0, N_BYTES_TO_RECEIVE*sizeof(char));
+        memset(&string_from_page, 0, N_BYTES_TO_RECV*sizeof(char));
 
     }
 
@@ -302,17 +305,17 @@ int http( char * url ){
     int len = getHTMLlength( info_file );
 
     if(len == CONTENT_LENGTH_NOT_FOUND){
-        printf("No page content-length found: %d\n", len);
+        printf("\tNo page content-length found!\n");
         len = getHTML_With_No_Length_Found( info_file, connection_socket );
     }else{
-        printf("Page content-length found: %d\n", len);
+        printf("\tPage content-length found: %d\n", len);
       	getHTML( info_file, len, connection_socket );
     }
 
     free(info_file);
     close(connection_socket);
 
-    printf("HTML page collected!\n");
+    printf("\tHTML page collected!\n");
 
     return len;
 

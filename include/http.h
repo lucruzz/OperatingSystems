@@ -9,8 +9,9 @@
 
 #define ERROR -1
 #define CONTENT_LENGTH_NOT_FOUND -2
-#define LENGTH_INFO_HTML 700
-#define N_BYTES_TO_RECEIVE 10
+#define LENGTH_STR_INFO_HTML 1000
+#define HTTP_REQUEST_SIZE 1000
+#define HTML_INFO_STR_SIZE 1000
 
 char * treatingURL( char * );
 struct addrinfo * getWebsiteSocket( char * );

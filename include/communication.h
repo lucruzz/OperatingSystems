@@ -8,8 +8,8 @@
 #define __COMMUNICATION_H__
 
 #define MAXRCVLEN 500
-#define N_BYTES_TO_RECV 10
-#define N_BYTES_TO_SEND 10
+#define N_BYTES_TO_RECV 500
+#define N_BYTES_TO_SEND 500
 
 #define TRUE 1
 #define FALSE 0
@@ -23,7 +23,9 @@
 #define LIST_ID 2
 #define EXIT_ID 3
 #define HISTORY_ID 4
-#define COMMAND_ID_NOT_FOUND -1
+#define COMMAND_ID_NOT_FOUND -2
+
+#define COMMUNICATION_ERROR -1
 
 void sendInt( int intNumber, int socket );
 int recvInt( int socket );

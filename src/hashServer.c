@@ -106,7 +106,6 @@ void removeHash( Hash hashArray[] ){
     }
 }
 
-
 LinkedList * remove_Hash_Node ( LinkedList * previous_node, LinkedList * node, int index, Hash hashArray[] ){
 
     LinkedList * aux;

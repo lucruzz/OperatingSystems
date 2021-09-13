@@ -19,10 +19,10 @@
 #include "../include/argsList.h"
 #include "../include/directories.h"
 #include "../include/communication.h"
+#include "../include/hashServer.h" // TABLE_SIZE
 
-// Rever defines
-#define MAX_LINE_SIZE 1000
-#define HASHTABLE_SIZE 10
+#define MAX_LINE_READ_COMMAND_SIZE 1000
+#define MAX_LINE_PATH_SHARED_FOLDER 20
 
 typedef struct ClientInformation{
     int socket;
@@ -72,6 +72,7 @@ void search(char *command, char *shared_directory, int mysocket){
 
             // Recebo a quantidade de bytes da página a ser recebida
             int n_bytes_to_recv = recvInt(mysocket);
+            printf("\t=== Content-Length: %d ===\n", n_bytes_to_recv);
 
             // Recebo o nome da paǵina
             char * page_filename = recvString(mysocket);
@@ -94,19 +95,26 @@ void search(char *command, char *shared_directory, int mysocket){
 
             char * page_recv = (char *) calloc(N_BYTES_TO_RECV, sizeof(char));
             // char * page_recv;
+            // char page_recv[N_BYTES_TO_RECV];
             int bytes_recv = 0;
+            // memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
 
-            while(bytes_recv != n_bytes_to_recv){
-                  //page_recv = recvString(mysocket);
+            while(1){
+                  // page_recv = recvString(mysocket);
                   recvString2(page_recv, mysocket);
                   fputs(page_recv, p);
                   bytes_recv += strlen(page_recv);
-                  // free(page_recv);
-                  memset(page_recv, 0, sizeof(char));
+                  //free(page_recv);
+                  //printf(">>>>> %d\n", bytes_recv);
+                  if( bytes_recv % n_bytes_to_recv == 0 ){
+                      break;
+                  }
+
+                  memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
             }
             free(page_recv);
             fclose(p);
-            printf("Page received from proxy!\n");
+            printf("\t=== Page received from proxy! ===\n");
 
             aux = aux->next;
         }
@@ -124,7 +132,7 @@ void list( int mysocket ){
     puts("> List");
 
     int j = 0;
-    while ( j < HASHTABLE_SIZE ){
+    while ( j < TABLE_SIZE ){
 
         int n = recvInt(mysocket);
 
@@ -184,7 +192,7 @@ int processCommand(char * command, int * run, ShellCommands * history, int mysoc
 
 void * readCommand( ShellCommands * history ){
 
-    char * command = (char *) calloc(MAX_LINE_SIZE, sizeof(char));
+    char * command = (char *) calloc(MAX_LINE_READ_COMMAND_SIZE, sizeof(char));
 
     printf(":~$ ");
     scanf(" %[^\n]%*c", command);
@@ -208,9 +216,9 @@ int clientConnection( int port ){
 
     int connectResult = connect(mysocket, (struct sockaddr *)&dest, sizeof(struct sockaddr_in));
 
-    if( connectResult == -1 ){
+    if( connectResult == COMMUNICATION_ERROR ){
         printf("CLIENT ERROR: %s\n", strerror(errno));
-        return -1;
+        return COMMUNICATION_ERROR;
     }
 
     return mysocket;
@@ -225,7 +233,7 @@ int main( int argc, char *argv[] ){
 
     int port = atoi( argv[ 2 ] );
 
-    char * shared_directory = ( char * ) calloc ( 20, sizeof(char) );
+    char * shared_directory = ( char * ) calloc ( MAX_LINE_PATH_SHARED_FOLDER, sizeof(char) );
     strcpy( shared_directory, argv[ 1 ] );
 
     char * command;
@@ -235,9 +243,9 @@ int main( int argc, char *argv[] ){
 
     printf("[ PORTA ] %d\n[ SHARED DIRECTORY ] %s\n[ CLIENT SOCKET ] %d\n", port, shared_directory, mysocket);
 
-    if(mysocket == -1){
+    if(mysocket == COMMUNICATION_ERROR){
         free(history);
-        return -1;
+        return COMMUNICATION_ERROR;
     }
 
     while(run){

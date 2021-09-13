@@ -7,7 +7,7 @@
 #ifndef __HASHSERVER_H__
 #define __HASHSERVER_H__
 
-#define MAX_SITE_STR_LENGHT 500
+#define MAX_SITE_STR_LENGHT 700
 #define TABLE_SIZE 10
 
 typedef struct LinkedList{
