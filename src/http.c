@@ -123,7 +123,7 @@ char * getHTMLinformation( char * url, int connection_socket ){
     strcat( path_to_info_file, "/" );
     strcat( path_to_info_file, info_file );
 
-    FILE * pFile = fopen (path_to_info_file, "a");
+    FILE * pFile = fopen (path_to_info_file, "w");
 
     while( 1 ){
 
@@ -223,6 +223,7 @@ void getHTML( char * info_file, int len, int connection_socket ){
     // memset(&string_from_page, 0, sizeof(char));
     //memset(string_from_page, 0, N_BYTES_TO_RECV*sizeof(char) + 1);
 
+    // int k = 0;
     while( 1 ){
         // int page_number_of_bytes = recv( connection_socket, &string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
         int page_number_of_bytes = recv( connection_socket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);

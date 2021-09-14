@@ -110,28 +110,37 @@ void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
 
                         int number_of_bytes_reads = 0;
                         int send_n_bytes = N_BYTES_TO_SEND;
-                        char string_line_from_file[send_n_bytes];
+
+                        char * string_line_from_file = (char *) calloc( N_BYTES_TO_SEND + 1, sizeof(char));
 
                         FILE * p = fopen(path_to_html_file_on_proxy, "r");
-                        memset(&string_line_from_file, 0, send_n_bytes*sizeof(char));
+                        int i = 0; // contador para content_length
+                        int pos = 0; // indice para armazenar o caracter 
 
+                        while( 1 ){
 
-                        while ( 1 ){
-                            fgets(string_line_from_file, send_n_bytes, p);
-                            number_of_bytes_reads += strlen(string_line_from_file);
-                            sendString(string_line_from_file, consocket);
+                            char c = fgetc( p );
 
-                            if( number_of_bytes_reads % content_length == 0 ){
+                            if( c == EOF ){
+                                sendString2(string_line_from_file, consocket);
                                 break;
                             }
 
-                            memset(&string_line_from_file, 0, send_n_bytes*sizeof(char));
-
+                            if( strlen(string_line_from_file) == N_BYTES_TO_SEND){
+                                sendString2(string_line_from_file, consocket);
+                                memset(string_line_from_file, 0, N_BYTES_TO_SEND);
+                                pos = 0;
+                            }
+                            *(string_line_from_file + pos) = c;
+                            i++;
+                            pos++;
                         }
+
                         printf("\t=== File %s sended to %s ===\n",  path_to_html_file_on_proxy, send_to_directory);
                         fclose(p);
                         free(file_to_send);
                         free(path_to_html_file_on_proxy);
+                        free(string_line_from_file);
 
                     }else{
                         // entrega o site para o cliente

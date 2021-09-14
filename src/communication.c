@@ -39,6 +39,12 @@ void sendString( char * string, int socket ){
     send(socket, string, sizeof(char)*len_str, 0);
 }
 
+void sendString2( char * string, int socket ){
+    int len_str = strlen(string);
+    sendInt(len_str, socket);
+    send(socket, string, sizeof(char)*len_str, 0);
+}
+
 char * recvString( int socket ){
     int len_str = 0;
     len_str = recvInt(socket);
@@ -47,8 +53,8 @@ char * recvString( int socket ){
     return string;
 }
 
-void recvString2( char * string, int socket ){
+int recvString2( char * string, int socket ){
     int len_str = 0;
     len_str = recvInt(socket);
-    recv(socket, string, len_str, 0);
+    return recv(socket, string, len_str, 0);
 }

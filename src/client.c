@@ -93,20 +93,23 @@ void search(char *command, char *shared_directory, int mysocket){
             free(page_filename);
             free(full_path_file);
 
-            char * page_recv = (char *) calloc(N_BYTES_TO_RECV, sizeof(char));
-            // char * page_recv;
-            // char page_recv[N_BYTES_TO_RECV];
+            char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
+
             int bytes_recv = 0;
-            // memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
 
             while(1){
-                  // page_recv = recvString(mysocket);
-                  recvString2(page_recv, mysocket);
+
+                  int bytes = recvString2(page_recv, mysocket);
+
                   fputs(page_recv, p);
-                  bytes_recv += strlen(page_recv);
-                  //free(page_recv);
-                  //printf(">>>>> %d\n", bytes_recv);
-                  if( bytes_recv % n_bytes_to_recv == 0 ){
+
+
+                  bytes_recv += bytes;
+
+                  if(bytes % N_BYTES_TO_RECV != 0)
+                      break;
+
+                  if( bytes_recv % n_bytes_to_recv == 0){
                       break;
                   }
 
