@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
@@ -250,6 +251,10 @@ int main( int argc, char *argv[] ){
         free(history);
         return COMMUNICATION_ERROR;
     }
+
+    pthread_t threads[ 2 ];
+    ClientInformation clientThread[ 2 ];
+
 
     while(run){
 
