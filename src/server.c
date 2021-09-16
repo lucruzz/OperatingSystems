@@ -207,7 +207,7 @@ int serverConection(char * argv[]){
     // start listening, allowing a queue of up to 1 pending connection
     listen(serverSocket, 1);
 
-    printf("Server is waiting for connections on port:%s\n", argv[ 1 ] );
+    printf("\t=== Server is waiting for connections on port: %s ===\n", argv[ 1 ] );
 
     return serverSocket;
 }
@@ -219,7 +219,9 @@ int connectionSocket(int serverSocket){
 
     int consocket = accept(serverSocket, (struct sockaddr *)&dest, &socksize);
 
-    printf("Incoming connection from %s - sending welcome\n", inet_ntoa(dest.sin_addr));
+    if( consocket != COMMUNICATION_ERROR){
+        printf("\t=== Incoming connection from %s ===\n", inet_ntoa(dest.sin_addr));
+    }
 
     return consocket;
 }
@@ -291,15 +293,19 @@ int main(int argc, char *argv[]){
 
     int run = TRUE;
     int serverSocket = serverConection(argv);
+
+    if(serverSocket == COMMUNICATION_ERROR){
+        return COMMUNICATION_ERROR;
+    }
+
     int consocket = connectionSocket(serverSocket);
 
+    if(consocket == COMMUNICATION_ERROR){
+        return COMMUNICATION_ERROR;
+    }
+    printf("\t=== Proxy server receiving message from client (socket) %d ===\n", serverSocket);
+
     memset(&hashArray, 0, TABLE_SIZE*sizeof(Hash));
-
-    // Cria o diretório com as informações da página
-    // if ( !makeDirectory(INFO_PAGES_DIRECTORY) ) { return 0; }
-
-    // Cria o diretório da proxy para armazenar as páginas que o cliente poderá baixar
-    // if ( !makeDirectory(PROXY_DIRECTORY) ) { return 0; }
 
     while(run){
 
@@ -313,10 +319,6 @@ int main(int argc, char *argv[]){
     }
 
     removeHash(hashArray);
-
-    // remove os diretórios criados
-    // removeDirectory(INFO_PAGES_DIRECTORY);
-    // removeDirectory(PROXY_DIRECTORY);
 
     close(consocket);
     close(serverSocket);

@@ -212,10 +212,10 @@ int clientConnection( int port ){
 
     mysocket = socket(AF_INET, SOCK_STREAM, 0);
 
-    memset(&dest, 0, sizeof(dest));               /* zero the struct */
+    memset(&dest, 0, sizeof(dest));               // zero the struct
     dest.sin_family = AF_INET;
-    dest.sin_addr.s_addr = htonl(INADDR_LOOPBACK);/* set destination IP number - localhost, 127.0.0.1*/
-    dest.sin_port = htons( port );   /* set destination port number */
+    dest.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // set destination IP number - localhost, 127.0.0.1
+    dest.sin_port = htons( port );   // set destination port number
 
     int connectResult = connect(mysocket, (struct sockaddr *)&dest, sizeof(struct sockaddr_in));
 
