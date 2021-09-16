@@ -17,13 +17,12 @@
 int hashFunction( char * site ){
 
     int sum = 0; // variavel para somar as letras (ASCII - decimal) e o número de letras
-    int ascii_decimal; // recebe o número da letra referente a seu decimal na ASCII
     int n = strlen(site);
 
     for( int i = 0; i < n; i++ ){
-        ascii_decimal = (int)(*site + i);
-        sum = ascii_decimal + i + 1;
+        sum += (int)*(site + i);
     }
+
     return (sum + n) % 10;
 }
 
