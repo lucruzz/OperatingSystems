@@ -252,10 +252,6 @@ int main( int argc, char *argv[] ){
         return COMMUNICATION_ERROR;
     }
 
-    pthread_t threads[ 2 ];
-    ClientInformation clientThread[ 2 ];
-
-
     while(run){
 
         command = readCommand(history);

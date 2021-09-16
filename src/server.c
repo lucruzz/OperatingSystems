@@ -6,16 +6,17 @@
 /*======================================================*/
 #include <time.h>
 #include <stdio.h>
+#include <errno.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 #include <unistd.h>
+#include <stdbool.h>
+#include <pthread.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <errno.h>
-#include <signal.h>
 
 #include "../include/communication.h"
 #include "../include/hashServer.h"
@@ -24,8 +25,14 @@
 
 #define TIME_INTERVAL 20
 #define MAX_TIME 120
+#define NUM_THREADS 2
+
+typedef struct ClientArguments_t{
+    int socket;
+}ClientArguments_t;
 
 Hash hashArray[TABLE_SIZE];
+bool runServer;
 
 void sendPageToClient( LinkedList * node, char  * send_to_directory, int consocket ){
 
@@ -90,102 +97,121 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
 
 }
 
-void executeCommand(int command_id, Hash hashArray[], int * run, int consocket){
+void * executeCommand( void * ptr ){
 
-      switch (command_id) {
+    int* inteiro = (int*) ptr;
+    bool runClient = true;
+    ClientArguments_t * pt = (ClientArguments_t *) ptr;
 
-        case LIST_ID:
-            printf("[LIST COMMAND]\n");
-            //printHash(hashArray);
+    printf("\t=== Proxy server receiving message from client %d ===\n", *inteiro);
 
-            int i = 0;
+    while( runClient ){
 
-            while( i < TABLE_SIZE ){
+        int consocket = pt->socket;
 
-                if(hashArray[i].begin == NULL){
+        //Recebe o ID do comando a ser processado
+        int commandReceived_id = 0;
+        commandReceived_id = recvInt(consocket);
 
-                    sendInt(0, consocket);
+        switch (commandReceived_id) {
 
-                }else{
+          case LIST_ID:
+              printf("[LIST COMMAND]\n");
+              //printHash(hashArray);
 
-                    LinkedList * node = hashArray[i].begin;
-                    int n = hashArray[i].n_elements;
+              int i = 0;
 
-                    sendInt(n, consocket);
+              while( i < TABLE_SIZE ){
 
-                    for ( int j = 1; j <= n; j++ ){
-                        sendString(node->site, consocket);
-                        node = node->next;
-                    }
+                  if(hashArray[i].begin == NULL){
 
-                }
-                i++;
+                      sendInt(0, consocket);
 
-            }
+                  }else{
 
-            break;
+                      LinkedList * node = hashArray[i].begin;
+                      int n = hashArray[i].n_elements;
 
-        case SEARCH_ID:
-            printf("[SEARCH COMMAND]\n");
+                      sendInt(n, consocket);
 
-            // Recebe o número de argumentos (sites) a serem processados
-            int n = recvInt(consocket);
-            char * send_to_directory = recvString(consocket);
+                      for ( int j = 1; j <= n; j++ ){
+                          sendString(node->site, consocket);
+                          node = node->next;
+                      }
 
-            if(n){
-                for( int i = 0; i < n; i++ ){
-                    // Recebe o argumento (site) enviado do cliente
-                    char * str = recvString(consocket);
+                  }
+                  i++;
 
-                    LinkedList * node = searchInHash(str, hashArray);
+              }
 
-                    if( node == NULL ){
-                        // busca na internet
+              break;
 
-                        printf("\t=== Searching for site ===\n");
+          case SEARCH_ID:
+              printf("[SEARCH COMMAND]\n");
 
-                        int content_length = http(str);
+              // Recebe o número de argumentos (sites) a serem processados
+              int n = recvInt(consocket);
+              char * send_to_directory = recvString(consocket);
 
-                        // Inclui na hash
-                        node = createNode(str, content_length, hashArray);
+              if(n){
+                  for( int i = 0; i < n; i++ ){
+                      // Recebe o argumento (site) enviado do cliente
+                      char * str = recvString(consocket);
 
-                        printf("\t=== HTML file available on proxy ===\n");
-                        printf("\t      %s", ctime(&node->creation_time));
+                      LinkedList * node = searchInHash(str, hashArray);
 
-                        // entrega o site para o cliente
-                        sendPageToClient(node, send_to_directory, consocket);
+                      if( node == NULL ){
+                          // busca na internet
 
-                    }else{
-                        // entrega o site para o cliente
-                        printf("\t=== Page on proxy! Sending to client! ===\n");
+                          printf("\t=== Searching for site ===\n");
 
-                        sendPageToClient(node, send_to_directory, consocket);
+                          int content_length = http(str);
 
-                        free(str);
-                    }
+                          // Inclui na hash
+                          node = createNode(str, content_length, hashArray);
 
-                }
-            }
+                          printf("\t=== HTML file available on proxy ===\n");
+                          printf("\t      %s", ctime(&node->creation_time));
 
-            free(send_to_directory);
+                          // entrega o site para o cliente
+                          sendPageToClient(node, send_to_directory, consocket);
 
-            break;
+                      }else{
+                          // entrega o site para o cliente
+                          printf("\t=== Page on proxy! Sending to client! ===\n");
 
-        case HISTORY_ID:
-            printf("[HISTORY COMMAND]\n");
-            break;
+                          sendPageToClient(node, send_to_directory, consocket);
 
-        case COMMAND_ID_NOT_FOUND:
-            printf("[COMMAND NOT FOUND]\n");
-            break;
+                          free(str);
+                      }
 
-        case EXIT_ID:
-            printf("[EXIT COMMAND]\n");
-            printf("Server says bye bye!\n");
-            *run = FALSE;
-            break;
+                  }
+              }
 
-      }
+              free(send_to_directory);
+
+              break;
+
+          case HISTORY_ID:
+              printf("[HISTORY COMMAND]\n");
+              break;
+
+          case COMMAND_ID_NOT_FOUND:
+              printf("[COMMAND NOT FOUND]\n");
+              break;
+
+          case EXIT_ID:
+              printf("[EXIT COMMAND]\n");
+              close(consocket);
+              printf("\t=== Client %d disconnected! ===\n", *inteiro);
+              printf("\t=== Server says bye bye to client %d! ===\n", *inteiro);
+              runClient = false;
+              break;
+
+        }
+    }
+
+    return (void*) 0;
 
 }
 
@@ -280,6 +306,21 @@ void verifyHashtable( int signum ){
 
 }
 
+void  closeProxy(int sig){
+     char  c;
+
+     signal(sig, SIG_IGN);
+     printf("OUCH, did you hit Ctrl-C?\n"
+            "Do you really want to quit? [y/n] ");
+     c = getchar();
+     if (c == 'y' || c == 'Y')
+          //exit(0);
+          runServer = false;
+     else
+          signal(SIGINT, closeProxy);
+     getchar(); // Get new line character
+}
+
 int main(int argc, char *argv[]){
 
     if( argc != 2 ){
@@ -288,39 +329,53 @@ int main(int argc, char *argv[]){
     }
 
     signal( SIGALRM, verifyHashtable ); // Register signal handler
+    signal(SIGINT, closeProxy); // Signal to close/exit Proxy server
 
     alarm( TIME_INTERVAL ); // Scheduled alarm after 20 seconds
 
-    int run = TRUE;
     int serverSocket = serverConection(argv);
 
     if(serverSocket == COMMUNICATION_ERROR){
         return COMMUNICATION_ERROR;
     }
 
-    int consocket = connectionSocket(serverSocket);
+    int i = 0; // number of connected clients
+    runServer = true;
 
-    if(consocket == COMMUNICATION_ERROR){
-        return COMMUNICATION_ERROR;
-    }
-    printf("\t=== Proxy server receiving message from client (socket) %d ===\n", serverSocket);
+    pthread_t threads[ NUM_THREADS ];
 
     memset(&hashArray, 0, TABLE_SIZE*sizeof(Hash));
 
-    while(run){
+    while( runServer ){
 
-        //Recebe o ID do comando a ser processado
-        int commandReceived_id = 0;
-        commandReceived_id = recvInt(consocket);
+        int consocket = connectionSocket(serverSocket);
 
-        // Executa o comando de acordo com o ID do comando recebido
-        executeCommand(commandReceived_id, hashArray, &run, consocket);
+        if(consocket == COMMUNICATION_ERROR){
+
+            if( !runServer ){
+                break;
+            }
+
+            printf("Client connection failed!\n");
+            //return COMMUNICATION_ERROR;
+            continue;
+        }
+
+        ClientArguments_t * pt = calloc(1, sizeof(ClientArguments_t));
+        pt->socket = consocket;
+
+        int error_t = pthread_create( &threads[i], NULL, executeCommand, pt );
+
+        if(error_t){
+            printf("\t=== Sorry! The thread could not be created!\n ===");
+            free(pt);
+            continue;
+        }
+        i++;
 
     }
 
     removeHash(hashArray);
-
-    close(consocket);
     close(serverSocket);
     return EXIT_SUCCESS;
 }
