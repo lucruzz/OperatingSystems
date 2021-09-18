@@ -343,6 +343,7 @@ int main(int argc, char *argv[]){
     runServer = true;
 
     pthread_t threads[ NUM_THREADS ];
+    ClientArguments_t * processClient[ NUM_THREADS ];
 
     memset(&hashArray, 0, TABLE_SIZE*sizeof(Hash));
 
@@ -357,23 +358,39 @@ int main(int argc, char *argv[]){
             }
 
             printf("Client connection failed!\n");
-            //return COMMUNICATION_ERROR;
             continue;
         }
 
         ClientArguments_t * pt = calloc(1, sizeof(ClientArguments_t));
         pt->socket = consocket;
 
-        int error_t = pthread_create( &threads[i], NULL, executeCommand, pt );
+        int error_t = pthread_create( &threads[ i ], NULL, executeCommand, pt );
 
         if(error_t){
             printf("\t=== Sorry! The thread could not be created!\n ===");
             free(pt);
             continue;
         }
+        processClient[ i ] = pt;
+
         i++;
 
     }
+
+    void * returnValue = NULL;
+
+    for( int j = 0; j < i; j++ ){
+
+        int success = pthread_join( threads[ j ], returnValue );
+        if(success != 0){
+            printf("Error on thread_id %ld!\n", threads[ j ]);
+        }
+        free(processClient[ j ]);
+        //printf(">> %p\n", returnValue);
+    }
+
+    // pthread_exit(NULL);
+
 
     removeHash(hashArray);
     close(serverSocket);
