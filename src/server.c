@@ -343,6 +343,7 @@ int main(int argc, char *argv[]){
     runServer = true;
 
     pthread_t threads[ NUM_THREADS ];
+    // Array to store pointers after memory allocation (for freeing memory in the end)
     ClientArguments_t * processClient[ NUM_THREADS ];
 
     memset(&hashArray, 0, TABLE_SIZE*sizeof(Hash));

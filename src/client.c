@@ -29,6 +29,7 @@ typedef struct ClientInformation{
     int socket;
     int port;
     char * shared_directory;
+    char * str_aux; // string auxiliar para ajudar no search, por exemplo
 }ClientInformation;
 
 List * determineArguments(char * commandArgs){
@@ -47,86 +48,198 @@ List * determineArguments(char * commandArgs){
     return commandList;
 }
 
+void * search_function_multithread( void * ptr ){
+
+    ClientInformation * pt = (ClientInformation *) ptr;
+    char * shared_directory = pt->shared_directory;
+    int mysocket = pt->socket;
+    char * str_argument = pt->str_aux;
+
+    // Pego o tamanho do caminho do diretório
+    int length_str_shared_directory = strlen( shared_directory );
+
+    // Envia o argumento (site) para o Servidor
+    sendString(str_argument, mysocket);
+
+    // Recebo a quantidade de bytes da página a ser recebida
+    int n_bytes_to_recv = recvInt(mysocket);
+    printf("\t=== Content-Length: %d ===\n", n_bytes_to_recv);
+
+    // Recebo o nome da paǵina
+    char * page_filename = recvString(mysocket);
+    printf(">>>>>>>>>>>>>>>> %s\n", page_filename);
+    // Pego o tamanho do nome da página
+    int length_str_page_filename = strlen(page_filename);
+
+    int total_full_length_to_file = length_str_shared_directory + length_str_page_filename;
+
+    // Aloco uma string para o tamanho total para o arquivo "no lado do" cliente
+    char * full_path_file = ( char * ) calloc(total_full_length_to_file + 2, sizeof(char));
+    strcat(full_path_file, shared_directory);
+    strcat(full_path_file, "/");
+    strcat(full_path_file, page_filename);
+
+    // Abro o arquivo para armazenar a página "no lado" cliente
+    FILE * p = fopen(full_path_file, "w");
+
+    free(page_filename);
+    free(full_path_file);
+
+    char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
+
+    int bytes_recv = 0;
+
+    while(1){
+
+          int bytes = recvString2(page_recv, mysocket);
+
+          fputs(page_recv, p);
+
+
+          bytes_recv += bytes;
+
+          if(bytes % N_BYTES_TO_RECV != 0)
+              break;
+
+          if( bytes_recv % n_bytes_to_recv == 0){
+              break;
+          }
+
+          memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
+    }
+    free(page_recv);
+    fclose(p);
+    printf("\t=== Page received from proxy! ===\n");
+
+
+    return (void *) 0;
+}
+/*
+void search_function_single_thread(){
+    // Armazeno em um ponteiro auxiliar o início da lista de argumentos
+    Node * aux = commandList->begin;
+
+    // Pego o tamanho do caminho do diretório
+    int length_str_shared_directory = strlen(shared_directory);
+
+    for( int i = 0; i < n; i++ ){
+        // Envia o argumento (site) para o Servidor
+        sendString(aux->argument, mysocket);
+
+        // Recebo a quantidade de bytes da página a ser recebida
+        int n_bytes_to_recv = recvInt(mysocket);
+        printf("\t=== Content-Length: %d ===\n", n_bytes_to_recv);
+
+        // Recebo o nome da paǵina
+        char * page_filename = recvString(mysocket);
+        // Pego o tamanho do nome da página
+        int length_str_page_filename = strlen(page_filename);
+
+        int total_full_length_to_file = length_str_shared_directory + length_str_page_filename;
+
+        // Aloco uma string para o tamanho total para o arquivo "no lado do" cliente
+        char * full_path_file = ( char * ) calloc(total_full_length_to_file + 2, sizeof(char));
+        strcat(full_path_file, shared_directory);
+        strcat(full_path_file, "/");
+        strcat(full_path_file, page_filename);
+
+        // Abro o arquivo para armazenar a página "no lado" cliente
+        FILE * p = fopen(full_path_file, "w");
+
+        free(page_filename);
+        free(full_path_file);
+
+        char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
+
+        int bytes_recv = 0;
+
+        while(1){
+
+              int bytes = recvString2(page_recv, mysocket);
+
+              fputs(page_recv, p);
+
+
+              bytes_recv += bytes;
+
+              if(bytes % N_BYTES_TO_RECV != 0)
+                  break;
+
+              if( bytes_recv % n_bytes_to_recv == 0){
+                  break;
+              }
+
+              memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
+        }
+        free(page_recv);
+        fclose(p);
+        printf("\t=== Page received from proxy! ===\n");
+
+        aux = aux->next;
+    }
+    free(aux);
+    removeList(commandList);
+}*/
+
 // Busca n sites
-void search(char *command, char *shared_directory, int mysocket){
+void search(char *command, ClientInformation * ptr){
 
     puts("> Search");
 
+    int mysocket = ptr->socket;
+    char * shared_directory = ptr->shared_directory;
+
+    // Cria uma lista encadeada com os argumentos (sites/urls) do comando
     List * commandList = determineArguments(command);
 
+    // Armazeno o número de argumentos processados no comando search
     int n = commandList->n_elements;
+
+    // Cria uma estrutura para armazenar os threads_ids de acordo com o número de sites
+    pthread_t search_t[ n ];
+
     // Envia o número de argumentos (sites)
     sendInt(n, mysocket);
 
     // Envia o diretório compartilhado a que deseja receber os dados
     sendString(shared_directory, mysocket);
 
-    if(n){
+
+    if(n != 0){
+        // Armazeno em um ponteiro auxiliar o início da lista de argumentos
         Node * aux = commandList->begin;
 
-        // Pego o tamanho do caminho do diretório
-        int length_str_shared_directory = strlen(shared_directory);
+        for ( int i = 0; i < n; i++ ){
+            // armazena a string (site) na estrutura ClientInformation_t
+            ptr->str_aux = aux->argument;
 
-        for( int i = 0; i < n; i++ ){
-            // Envia o argumento (site) para o Servidor
-            sendString(aux->argument, mysocket);
+            // cria uma thread para processar a busca
+            int error_t = pthread_create( &search_t[ i ], NULL, search_function_multithread, ptr );
 
-            // Recebo a quantidade de bytes da página a ser recebida
-            int n_bytes_to_recv = recvInt(mysocket);
-            printf("\t=== Content-Length: %d ===\n", n_bytes_to_recv);
-
-            // Recebo o nome da paǵina
-            char * page_filename = recvString(mysocket);
-            // Pego o tamanho do nome da página
-            int length_str_page_filename = strlen(page_filename);
-
-            int total_full_length_to_file = length_str_shared_directory + length_str_page_filename;
-
-            // Aloco uma string para o tamanho total para o arquivo "no lado do" cliente
-            char * full_path_file = ( char * ) calloc(total_full_length_to_file + 2, sizeof(char));
-            strcat(full_path_file, shared_directory);
-            strcat(full_path_file, "/");
-            strcat(full_path_file, page_filename);
-
-            // Abro o arquivo para armazenar a página "no lado" cliente
-            FILE * p = fopen(full_path_file, "w");
-
-            free(page_filename);
-            free(full_path_file);
-
-            char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
-
-            int bytes_recv = 0;
-
-            while(1){
-
-                  int bytes = recvString2(page_recv, mysocket);
-
-                  fputs(page_recv, p);
-
-
-                  bytes_recv += bytes;
-
-                  if(bytes % N_BYTES_TO_RECV != 0)
-                      break;
-
-                  if( bytes_recv % n_bytes_to_recv == 0){
-                      break;
-                  }
-
-                  memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
+            if(error_t){
+                printf("\t=== [search] Error: Thread for search %s could not be created!\n ===", aux->argument);
             }
-            free(page_recv);
-            fclose(p);
-            printf("\t=== Page received from proxy! ===\n");
-
+            // passa para o próximo da lista
             aux = aux->next;
         }
+
+        void * returnValue = NULL;
+
+        for( int j = 0; j < n; j++ ){
+
+            int success = pthread_join( search_t[ j ], returnValue );
+            if(success != 0){
+                printf("Error on thread_id %ld!\n", search_t[ j ]);
+            }
+        }
+
         free(aux);
         removeList(commandList);
 
+        // Executes search_function_single_thread();
+
     }else{
-        printf("No arguments to search command!\n");
+        printf("\t==== No arguments to search command! ===\n");
     }
 }
 
@@ -159,7 +272,9 @@ void exit_( int * run, ShellCommands * history ){
     puts("Client says bye bye!");
 }
 
-int processCommand(char * command, int * run, ShellCommands * history, int mysocket, char * shared_directory ){
+int processCommand(char * command, int * run, ShellCommands * history, ClientInformation * pt ){
+
+    int mysocket = pt->socket;
 
     char * strings = strtok(command, " ");
 
@@ -168,7 +283,7 @@ int processCommand(char * command, int * run, ShellCommands * history, int mysoc
     if( !strcmp( strings, SEARCH ) ){
         command_id = SEARCH_ID;
         sendInt(command_id, mysocket); // Envia o ID do comando a ser processado
-        search(strings, shared_directory, mysocket);
+        search(strings, pt);
 
     }else if( !strcmp( strings, LIST ) ){
         command_id = LIST_ID;
@@ -245,18 +360,22 @@ int main( int argc, char *argv[] ){
     ShellCommands * history = createHistory();
     int mysocket = clientConnection(port);
 
-    printf("[ PORTA ] %d\n[ SHARED DIRECTORY ] %s\n[ CLIENT SOCKET ] %d\n", port, shared_directory, mysocket);
-
     if(mysocket == COMMUNICATION_ERROR){
         free(history);
         return COMMUNICATION_ERROR;
     }
 
+    //printf("[ PORTA ] %d\n[ SHARED DIRECTORY ] %s\n[ CLIENT SOCKET ] %d\n", port, shared_directory, mysocket);
+    ClientInformation * pt = (ClientInformation *) calloc( 1, sizeof(ClientInformation) );
+    pt->port = port;
+    pt->shared_directory = shared_directory;
+    pt->socket = mysocket;
+
     while(run){
 
         command = readCommand(history);
 
-        int command_id = processCommand(command, &run, history, mysocket, shared_directory);
+        int command_id = processCommand(command, &run, history, pt);
 
         free(command);
 
@@ -264,5 +383,6 @@ int main( int argc, char *argv[] ){
 
     close(mysocket);
     free(shared_directory);
+    free(pt);
     return EXIT_SUCCESS;
 }
