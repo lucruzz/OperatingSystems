@@ -29,6 +29,7 @@ void insertArg(char * StringArgument, List * listStructure){
     }
     listStructure->end = newnode;
     listStructure->n_elements += 1;
+
 }
 
 void printList(List * listStructure){

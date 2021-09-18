@@ -56,5 +56,6 @@ char * recvString( int socket ){
 int recvString2( char * string, int socket ){
     int len_str = 0;
     len_str = recvInt(socket);
-    return recv(socket, string, len_str, 0);
+    int bytes = recv(socket, string, len_str, 0);
+    return bytes;
 }

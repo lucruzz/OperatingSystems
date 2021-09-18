@@ -29,7 +29,7 @@ typedef struct ClientInformation{
     int socket;
     int port;
     char * shared_directory;
-    char * str_aux; // string auxiliar para ajudar no search, por exemplo
+    char * str_aux;
 }ClientInformation;
 
 List * determineArguments(char * commandArgs){
@@ -46,6 +46,19 @@ List * determineArguments(char * commandArgs){
     }
 
     return commandList;
+}
+
+Node * createListOfPointers( Node * lista [], List * command_list ){
+
+    Node * pt = command_list->begin;
+    int n = command_list->n_elements;
+
+    for( int i = 0; i < n; i++ ){
+        lista[ i ] = pt;
+        pt = pt->next;
+    }
+
+    return * lista;
 }
 
 void * search_function_multithread( void * ptr ){
@@ -67,7 +80,7 @@ void * search_function_multithread( void * ptr ){
 
     // Recebo o nome da paǵina
     char * page_filename = recvString(mysocket);
-    printf(">>>>>>>>>>>>>>>> %s\n", page_filename);
+
     // Pego o tamanho do nome da página
     int length_str_page_filename = strlen(page_filename);
 
@@ -86,7 +99,6 @@ void * search_function_multithread( void * ptr ){
     free(full_path_file);
 
     char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
-
     int bytes_recv = 0;
 
     while(1){
@@ -110,7 +122,6 @@ void * search_function_multithread( void * ptr ){
     free(page_recv);
     fclose(p);
     printf("\t=== Page received from proxy! ===\n");
-
 
     return (void *) 0;
 }
@@ -204,23 +215,24 @@ void search(char *command, ClientInformation * ptr){
     // Envia o diretório compartilhado a que deseja receber os dados
     sendString(shared_directory, mysocket);
 
-
     if(n != 0){
         // Armazeno em um ponteiro auxiliar o início da lista de argumentos
-        Node * aux = commandList->begin;
+        //Node * aux = commandList->begin;
+        Node * list_ptr[ n ];
+      	createListOfPointers( list_ptr, commandList );
 
         for ( int i = 0; i < n; i++ ){
+
             // armazena a string (site) na estrutura ClientInformation_t
-            ptr->str_aux = aux->argument;
+            ptr->str_aux = list_ptr[ i ]->argument;//aux->argument;
 
             // cria uma thread para processar a busca
             int error_t = pthread_create( &search_t[ i ], NULL, search_function_multithread, ptr );
 
             if(error_t){
-                printf("\t=== [search] Error: Thread for search %s could not be created!\n ===", aux->argument);
+                printf("\t=== [search] Error: Thread could not be created! ===\n");
             }
-            // passa para o próximo da lista
-            aux = aux->next;
+
         }
 
         void * returnValue = NULL;
@@ -233,7 +245,7 @@ void search(char *command, ClientInformation * ptr){
             }
         }
 
-        free(aux);
+        //free(aux);
         removeList(commandList);
 
         // Executes search_function_single_thread();
