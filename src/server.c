@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -29,10 +30,13 @@
 
 typedef struct ClientArguments_t{
     int socket;
+    char * directory;
 }ClientArguments_t;
 
 Hash hashArray[TABLE_SIZE];
 bool runServer;
+sem_t sem1;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void sendPageToClient( LinkedList * node, char  * send_to_directory, int consocket ){
 
@@ -44,15 +48,22 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
 
     // esse trecho aqui pode ser generalizado, porque também é uma parte no http.c
     // aqui eu pego o nome do arquivo que foi salvo na proxy
-    char * pt = memrchr(str, '/', strlen(str)) + 1;
-    char * file_to_send = (char *) calloc (strlen(pt) + 1, sizeof(char) );
+
+    // REALMENTE PRECISA ALOCAR MEMÓRIA AQUI? ACHO QUE NÃO
+    char * pt = memrchr(str, '/', (int)strlen(str)) + 1;
+    char * file_to_send = (char *) calloc ((int)strlen(pt) + 1, sizeof(char) );
     strcpy(file_to_send, pt);
 
-    printf("\t=== Sending %s file to client ===\n", pt);
+    printf("\t=== Sending %s file to client ===\n", file_to_send);
+    // printf("1) %s - %d\n", str, (int)strlen(str));
+    // printf("2) %s - %d - %p\n", file_to_send, (int)strlen(file_to_send), file_to_send);
+    // printf("3) %s - %d - %p\n", pt, (int)strlen(pt), pt);
+    // sendInt((int)strlen(file_to_send), consocket);
+    // send(consocket, file_to_send, (int)strlen(file_to_send) + 1, 0);
 
     // Envio o nome da página
     sendString(file_to_send, consocket);
-
+/*
     // Configura string para criar arquivo dentro do diretório correto
     char * path_to_html_file_on_proxy = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
     strcpy( path_to_html_file_on_proxy, PROXY_DIRECTORY );
@@ -94,8 +105,60 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
     free(file_to_send);
     free(path_to_html_file_on_proxy);
     free(string_line_from_file);
+*/
+}
+
+void * search_t_( void * ptr ){
+
+    ClientArguments_t * pt = (ClientArguments_t * ) ptr;
+    int consocket = pt->socket;
+    char * send_to_directory = pt->directory;
+
+    // Recebe o argumento (site) enviado do cliente
+    char * str = recvString(consocket);
+
+    LinkedList * node = searchInHash(str, hashArray);
+    printf("SOCKET> %d\nDIRECTORY> %s\nURL> %s\nNODE> %p\n", consocket, send_to_directory, str, node);
+
+    if( node == NULL ){
+        // busca na internet
+
+        printf("\t=== Searching for site ===\n");
+
+        // pthread_mutex_lock(&mutex);
+
+        int content_length = http(str);
+        // pthread_mutex_unlock(&mutex);
+        printf("CONTENT-LENGTH> %d\n", content_length);
+
+        // sem_wait(&sem1);
+        // pthread_mutex_lock(&mutex);
+        // Inclui na hash
+        node = createNode(str, content_length, hashArray);
+        // sem_post(&sem1);
+        // pthread_mutex_unlock(&mutex);
+
+        printf("\t=== HTML file available on proxy ===\n");
+        printf("\t      %s", ctime(&node->creation_time));
+
+        // pthread_mutex_lock(&mutex);
+        // entrega o site para o cliente
+        sendPageToClient(node, send_to_directory, consocket);
+        // pthread_mutex_unlock(&mutex);
+
+    }else{
+        // entrega o site para o cliente
+        printf("\t=== Page on proxy! Sending to client! ===\n");
+
+        sendPageToClient(node, send_to_directory, consocket);
+
+        free(str);
+    }
+
+    return (void*) 0;
 
 }
+
 
 void * executeCommand( void * ptr ){
 
@@ -151,44 +214,74 @@ void * executeCommand( void * ptr ){
 
               // Recebe o número de argumentos (sites) a serem processados
               int n = recvInt(consocket);
-              char * send_to_directory = recvString(consocket);
 
-              if(n){
-                  for( int i = 0; i < n; i++ ){
-                      // Recebe o argumento (site) enviado do cliente
-                      char * str = recvString(consocket);
+              if( n > 0 ){
 
-                      LinkedList * node = searchInHash(str, hashArray);
+                  pthread_t search_t[ n ];
+                  char * send_to_directory = recvString(consocket);
+                  pt->directory = send_to_directory;
 
-                      if( node == NULL ){
-                          // busca na internet
+                  for ( int i = 0; i < n; i++ ){
 
-                          printf("\t=== Searching for site ===\n");
+                      // cria uma thread para processar a busca
+                      int error_t = pthread_create( &search_t[ i ], NULL, search_t_, pt );
 
-                          int content_length = http(str);
-
-                          // Inclui na hash
-                          node = createNode(str, content_length, hashArray);
-
-                          printf("\t=== HTML file available on proxy ===\n");
-                          printf("\t      %s", ctime(&node->creation_time));
-
-                          // entrega o site para o cliente
-                          sendPageToClient(node, send_to_directory, consocket);
-
-                      }else{
-                          // entrega o site para o cliente
-                          printf("\t=== Page on proxy! Sending to client! ===\n");
-
-                          sendPageToClient(node, send_to_directory, consocket);
-
-                          free(str);
+                      if(error_t){
+                          printf("\t=== [search] Error: Thread could not be created! ===\n");
                       }
 
                   }
-              }
 
-              free(send_to_directory);
+                  void * returnValue = NULL;
+
+                  for( int j = 0; j < n; j++ ){
+
+                      int success = pthread_join( search_t[ j ], returnValue );
+                      if(success != 0){
+                          printf("Error on thread_id %ld!\n", search_t[ j ]);
+                      }
+                  }
+
+                  /////////////////////////////////////////////////////
+                  // for( int i = 0; i < n; i++ ){
+                  //     // Recebe o argumento (site) enviado do cliente
+                  //     char * str = recvString(consocket);
+                  //
+                  //     LinkedList * node = searchInHash(str, hashArray);
+                  //
+                  //     if( node == NULL ){
+                  //         // busca na internet
+                  //
+                  //         printf("\t=== Searching for site ===\n");
+                  //
+                  //         int content_length = http(str);
+                  //
+                  //         // sem_wait(&sem1);
+                  //         pthread_mutex_lock(&mutex);
+                  //         // Inclui na hash
+                  //         node = createNode(str, content_length, hashArray);
+                  //         // sem_post(&sem1);
+                  //         pthread_mutex_unlock(&mutex);
+                  //
+                  //         printf("\t=== HTML file available on proxy ===\n");
+                  //         printf("\t      %s", ctime(&node->creation_time));
+                  //
+                  //         // entrega o site para o cliente
+                  //         sendPageToClient(node, send_to_directory, consocket);
+                  //
+                  //     }else{
+                  //         // entrega o site para o cliente
+                  //         printf("\t=== Page on proxy! Sending to client! ===\n");
+                  //
+                  //         sendPageToClient(node, send_to_directory, consocket);
+                  //
+                  //         free(str);
+                  //     }
+                  //
+                  // }
+                  /////////////////////////////////////////////////////
+                  free(send_to_directory);
+              }
 
               break;
 
@@ -343,6 +436,8 @@ int main(int argc, char *argv[]){
     runServer = true;
 
     pthread_t threads[ NUM_THREADS ];
+    //sem_init(&sem1, 0, 1);
+    pthread_mutex_init(&mutex, NULL);
     // Array to store pointers after memory allocation (for freeing memory in the end)
     ClientArguments_t * processClient[ NUM_THREADS ];
 
@@ -392,7 +487,8 @@ int main(int argc, char *argv[]){
 
     // pthread_exit(NULL);
 
-
+    // sem_destroy(&sem1);
+    pthread_mutex_destroy(&mutex);
     removeHash(hashArray);
     close(serverSocket);
     return EXIT_SUCCESS;

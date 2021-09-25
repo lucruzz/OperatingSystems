@@ -34,7 +34,7 @@ double recvDouble( int socket ){
 }
 
 void sendString( char * string, int socket ){
-    int len_str =  strlen(string) + 1; // +1 para o '\0'
+    int len_str =  (int)strlen(string) + 1; // +1 para o '\0'
     sendInt(len_str, socket);
     send(socket, string, sizeof(char)*len_str, 0);
 }

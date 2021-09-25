@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <semaphore.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -24,6 +25,9 @@
 
 #define MAX_LINE_READ_COMMAND_SIZE 1000
 #define MAX_LINE_PATH_SHARED_FOLDER 20
+
+sem_t sem1;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct ClientInformation{
     int socket;
@@ -64,9 +68,13 @@ Node * createListOfPointers( Node * lista [], List * command_list ){
 void * search_function_multithread( void * ptr ){
 
     ClientInformation * pt = (ClientInformation *) ptr;
+    char * str_argument = pt->str_aux;
+    sem_post(&sem1);
+
     char * shared_directory = pt->shared_directory;
     int mysocket = pt->socket;
-    char * str_argument = pt->str_aux;
+
+    printf("> %d\n> %s\n> %s\n", mysocket, shared_directory, str_argument);
 
     // Pego o tamanho do caminho do diretório
     int length_str_shared_directory = strlen( shared_directory );
@@ -77,10 +85,19 @@ void * search_function_multithread( void * ptr ){
     // Recebo a quantidade de bytes da página a ser recebida
     int n_bytes_to_recv = recvInt(mysocket);
     printf("\t=== Content-Length: %d ===\n", n_bytes_to_recv);
+    // int tam = recvInt(mysocket);
+    // printf("strlen = %d\n", tam);
+    // char * page_filename = (char *) calloc( tam + 1, sizeof(char)*(tam+1));
+    // sem_wait(&sem1);
+    // recv(mysocket, page_filename, tam + 1, 0);
+    // sem_post(&sem1);
 
+    sem_wait(&sem1);
     // Recebo o nome da paǵina
     char * page_filename = recvString(mysocket);
-
+    sem_post(&sem1);
+    printf("\t=== Filename: %s ===\n", page_filename);
+/*
     // Pego o tamanho do nome da página
     int length_str_page_filename = strlen(page_filename);
 
@@ -122,7 +139,7 @@ void * search_function_multithread( void * ptr ){
     free(page_recv);
     fclose(p);
     printf("\t=== Page received from proxy! ===\n");
-
+*/
     return (void *) 0;
 }
 /*
@@ -224,6 +241,7 @@ void search(char *command, ClientInformation * ptr){
         for ( int i = 0; i < n; i++ ){
 
             // armazena a string (site) na estrutura ClientInformation_t
+            sem_wait(&sem1);
             ptr->str_aux = list_ptr[ i ]->argument;//aux->argument;
 
             // cria uma thread para processar a busca
@@ -382,6 +400,8 @@ int main( int argc, char *argv[] ){
     pt->port = port;
     pt->shared_directory = shared_directory;
     pt->socket = mysocket;
+    sem_init(&sem1, 0, 1);
+    pthread_mutex_init(&mutex, NULL);
 
     while(run){
 
@@ -393,6 +413,8 @@ int main( int argc, char *argv[] ){
 
     }
 
+    //sem_destroy(&sem1);
+    pthread_mutex_destroy(&mutex);
     close(mysocket);
     free(shared_directory);
     free(pt);
