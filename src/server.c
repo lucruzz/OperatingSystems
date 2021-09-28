@@ -55,14 +55,12 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
     strcpy(file_to_send, pt);
 
     printf("\t=== Sending %s file to client ===\n", file_to_send);
-    // printf("1) %s - %d\n", str, (int)strlen(str));
-    // printf("2) %s - %d - %p\n", file_to_send, (int)strlen(file_to_send), file_to_send);
-    // printf("3) %s - %d - %p\n", pt, (int)strlen(pt), pt);
-    // sendInt((int)strlen(file_to_send), consocket);
-    // send(consocket, file_to_send, (int)strlen(file_to_send) + 1, 0);
 
     // Envio o nome da página
     sendString(file_to_send, consocket);
+
+    free(file_to_send);
+
 /*
     // Configura string para criar arquivo dentro do diretório correto
     char * path_to_html_file_on_proxy = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
@@ -117,8 +115,10 @@ void * search_t_( void * ptr ){
     // Recebe o argumento (site) enviado do cliente
     char * str = recvString(consocket);
 
+    //pthread_mutex_lock(&mutex);
     LinkedList * node = searchInHash(str, hashArray);
-    printf("SOCKET> %d\nDIRECTORY> %s\nURL> %s\nNODE> %p\n", consocket, send_to_directory, str, node);
+    //pthread_mutex_unlock(&mutex);
+    // printf("SOCKET> %d\nDIRECTORY> %s\nURL> %s\nNODE> %p\n", consocket, send_to_directory, str, node);
 
     if( node == NULL ){
         // busca na internet
@@ -132,19 +132,34 @@ void * search_t_( void * ptr ){
         printf("CONTENT-LENGTH> %d\n", content_length);
 
         // sem_wait(&sem1);
-        // pthread_mutex_lock(&mutex);
+        pthread_mutex_lock(&mutex);
         // Inclui na hash
         node = createNode(str, content_length, hashArray);
-        // sem_post(&sem1);
-        // pthread_mutex_unlock(&mutex);
+        pthread_mutex_unlock(&mutex);
 
         printf("\t=== HTML file available on proxy ===\n");
         printf("\t      %s", ctime(&node->creation_time));
 
-        // pthread_mutex_lock(&mutex);
+        //pthread_mutex_lock(&mutex);
         // entrega o site para o cliente
-        sendPageToClient(node, send_to_directory, consocket);
-        // pthread_mutex_unlock(&mutex);
+        // sendPageToClient(node, send_to_directory, consocket);
+        //pthread_mutex_unlock(&mutex);
+
+        // Envia o número de bytes da página
+        sendInt(content_length, consocket);
+
+        // esse trecho aqui pode ser generalizado, porque também é uma parte no http.c
+        // aqui eu pego o nome do arquivo que foi salvo na proxy
+
+        // REALMENTE PRECISA ALOCAR MEMÓRIA AQUI? ACHO QUE NÃO
+        char * pt = memrchr(str, '/', (int)strlen(str)) + 1;
+        char * file_to_send = (char *) calloc ((int)strlen(pt) + 1, sizeof(char) );
+        strcpy(file_to_send, pt);
+
+        printf("\t=== Sending %s file to client ===\n", file_to_send);
+
+        // Envio o nome da página
+        sendString(file_to_send, consocket);
 
     }else{
         // entrega o site para o cliente
@@ -436,7 +451,7 @@ int main(int argc, char *argv[]){
     runServer = true;
 
     pthread_t threads[ NUM_THREADS ];
-    //sem_init(&sem1, 0, 1);
+    sem_init(&sem1, 0, 1);
     pthread_mutex_init(&mutex, NULL);
     // Array to store pointers after memory allocation (for freeing memory in the end)
     ClientArguments_t * processClient[ NUM_THREADS ];

@@ -36,6 +36,12 @@ typedef struct ClientInformation{
     char * str_aux;
 }ClientInformation;
 
+typedef struct SearchInformation_t{
+    int socket;
+    char * shared_directory;
+    char * site;
+}SearchInformation_t;
+
 List * determineArguments(char * commandArgs){
 
     int n_arguments = 0;
@@ -67,14 +73,13 @@ Node * createListOfPointers( Node * lista [], List * command_list ){
 
 void * search_function_multithread( void * ptr ){
 
-    ClientInformation * pt = (ClientInformation *) ptr;
-    char * str_argument = pt->str_aux;
-    sem_post(&sem1);
-
+    //ClientInformation * pt = (ClientInformation *) ptr;
+    //char * str_argument = pt->str_aux;
+    // sem_post(&sem1);
+    SearchInformation_t * pt = (SearchInformation_t *) ptr;
+    char * str_argument = pt->site;
     char * shared_directory = pt->shared_directory;
     int mysocket = pt->socket;
-
-    printf("> %d\n> %s\n> %s\n", mysocket, shared_directory, str_argument);
 
     // Pego o tamanho do caminho do diretório
     int length_str_shared_directory = strlen( shared_directory );
@@ -82,21 +87,25 @@ void * search_function_multithread( void * ptr ){
     // Envia o argumento (site) para o Servidor
     sendString(str_argument, mysocket);
 
+    //printf("> %d\n> %s\n> %s\n", mysocket, shared_directory, str_argument);
+
+    //pthread_mutex_lock(&mutex);
     // Recebo a quantidade de bytes da página a ser recebida
     int n_bytes_to_recv = recvInt(mysocket);
-    printf("\t=== Content-Length: %d ===\n", n_bytes_to_recv);
-    // int tam = recvInt(mysocket);
-    // printf("strlen = %d\n", tam);
-    // char * page_filename = (char *) calloc( tam + 1, sizeof(char)*(tam+1));
-    // sem_wait(&sem1);
-    // recv(mysocket, page_filename, tam + 1, 0);
-    // sem_post(&sem1);
 
-    sem_wait(&sem1);
+    printf("\t=== Content-Length: %d ===\n", n_bytes_to_recv);
+
     // Recebo o nome da paǵina
     char * page_filename = recvString(mysocket);
-    sem_post(&sem1);
+    //pthread_mutex_unlock(&mutex);
+    /*
+    char * file_ptr = memrchr(str_argument, '/', (int)strlen(str_argument)) + 1;
+    char * page_filename = (char *) calloc ((int)strlen(file_ptr) + 1, sizeof(char) );
+    strcpy(page_filename, file_ptr);
+    */
     printf("\t=== Filename: %s ===\n", page_filename);
+    free(page_filename);
+
 /*
     // Pego o tamanho do nome da página
     int length_str_page_filename = strlen(page_filename);
@@ -123,7 +132,6 @@ void * search_function_multithread( void * ptr ){
           int bytes = recvString2(page_recv, mysocket);
 
           fputs(page_recv, p);
-
 
           bytes_recv += bytes;
 
@@ -237,15 +245,29 @@ void search(char *command, ClientInformation * ptr){
         //Node * aux = commandList->begin;
         Node * list_ptr[ n ];
       	createListOfPointers( list_ptr, commandList );
+        SearchInformation_t search_t_id[ n ];
+
+        for ( int i = 0; i < n; i++ ){
+          search_t_id[ i ].socket = mysocket;
+          search_t_id[ i ].shared_directory = shared_directory;
+          search_t_id[ i ].site = list_ptr[ i ]->argument;
+        }
 
         for ( int i = 0; i < n; i++ ){
 
             // armazena a string (site) na estrutura ClientInformation_t
-            sem_wait(&sem1);
-            ptr->str_aux = list_ptr[ i ]->argument;//aux->argument;
+            //ptr->str_aux = list_ptr[ i ]->argument;//aux->argument;
+
+            // search_t_id[ i ].socket = mysocket;
+            // search_t_id[ i ].shared_directory = shared_directory;
+            // search_t_id[ i ].site = list_ptr[ i ]->argument;
+            //if( i == 1)
+            //    printf("%d %s %s\n", search_t_id[ i ].socket, search_t_id[ i ].shared_directory, search_t_id[ i ].site );
+            // printf("%d %s %s\n", ptr->socket, ptr->shared_directory, ptr->str_aux );
 
             // cria uma thread para processar a busca
-            int error_t = pthread_create( &search_t[ i ], NULL, search_function_multithread, ptr );
+            int error_t = pthread_create( &search_t[ i ], NULL, search_function_multithread, &search_t_id[ i ] );
+            //int error_t = pthread_create( &search_t[ i ], NULL, search_function_multithread, ptr );
 
             if(error_t){
                 printf("\t=== [search] Error: Thread could not be created! ===\n");
