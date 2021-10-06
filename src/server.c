@@ -26,25 +26,28 @@
 
 #define TIME_INTERVAL 20
 #define MAX_TIME 120
-#define NUM_THREADS 2
+#define NUM_THREADS 100
 
 typedef struct ClientArguments_t{
-    int socket;
+    struct sockaddr_in * dest;
     int serverSocket;
+    int clientSocket;
     int port;
 }ClientArguments_t;
 
 typedef struct SearchArguments_t{
+    struct sockaddr_in * dest;
     char * directory;
     char * site;
-    int socket;
+    int clientSocket;
     int serverSocket;
     int port;
+    int tid;
 }SearchArguments_t;
 
 Hash hashArray[TABLE_SIZE];
 bool runServer;
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 void sendPageToClient( LinkedList * node, char  * send_to_directory, int consocket ){
 
@@ -112,161 +115,49 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
 }
 
 LinkedList * searchInHashSynchronized( char * str, Hash hashArray[] ){
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&lock);
     LinkedList * node = searchInHash(str, hashArray);
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&lock);
     return node;
 }
 
 // Wrapper (embrulho)
 LinkedList * createNodeSynchronized( char * str, int content_length, Hash hashArray[] ){
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&lock);
     LinkedList * node = createNode(str, content_length, hashArray);
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&lock);
     return node;
 }
 
 void * handleSearch( void * ptr ){
 
-    SearchArguments_t * pt = (SearchArguments_t * ) ptr;
+    SearchArguments_t * pt = ( SearchArguments_t * ) ptr;
 
-    //int searchConSocket = searchConnectionSocket( pt->port );
-    int consocket = pt->socket;
-    //int serverSocket = pt->serverSocket;
-    char * send_to_directory = pt->directory;
-    char * str = pt->site;
+    char * str = recvString(pt->clientSocket);
+    pt->site = str;
+    printf("Thread %d: %s | Socket: %d\n", pt->tid, pt->site, pt->clientSocket);
+    //free(pt->site);
+    printf("recv on thread %d: %d\n", pt->tid, recvInt(pt->clientSocket));
 
-    printf("search Socket: %d | directory: %s | site: %s\n", consocket, pt->directory, pt->site);
-    //int consocket = acceptSearchConnectionSocket( serverSocket );
-
-    // // Recebe o argumento (site) enviado do cliente
-    // char * str = recvString(consocket);
-
-    // pthread_mutex_lock(&mutex);
-    // LinkedList * node = searchInHash(str, hashArray);
-    // pthread_mutex_unlock(&mutex);
-    LinkedList * node = searchInHashSynchronized(str, hashArray);
-    // printf("SOCKET> %d\nDIRECTORY> %s\nURL> %s\nNODE> %p\n", consocket, send_to_directory, str, node);
-
-
-    if( node == NULL ){
-        // busca na internet
-
-        printf("\t=== Searching for site ===\n");
-
-        // pthread_mutex_lock(&mutex);
-
-        int content_length = http(str);
-        // pthread_mutex_unlock(&mutex);
-
-        // pthread_mutex_lock(&mutex);
-        // Inclui na hash
-        // node = createNode(str, content_length, hashArray);
-        // pthread_mutex_unlock(&mutex);
-        node = createNodeSynchronized(str, content_length, hashArray);
-
-        printf("\t=== HTML file available on proxy ===\n");
-        printf("\t      %s", ctime(&node->creation_time));
-
-//////////////////////////////////////////////////////////////////
-        //pthread_mutex_lock(&mutex);
-        // entrega o site para o cliente
-        // sendPageToClient(node, send_to_directory, consocket);
-        //pthread_mutex_unlock(&mutex);
-//////////////////////////////////////////////////////////////////
-
-        // Envia o número de bytes da página
-        sendInt(content_length, consocket);
-
-        // esse trecho aqui pode ser generalizado, porque também é uma parte no http.c
-        // aqui eu pego o nome do arquivo que foi salvo na proxy
-
-        // REALMENTE PRECISA ALOCAR MEMÓRIA AQUI? ACHO QUE NÃO
-        char * pt = memrchr(str, '/', (int)strlen(str)) + 1;
-        char * file_to_send = (char *) calloc ((int)strlen(pt) + 1, sizeof(char) );
-        //char file_to_send[(int)strlen(pt) + 1];
-        //memset(file_to_send, 0, (int)strlen(pt) + 1);
-        strcpy(file_to_send, pt);
-
-        printf("\t=== Sending %s file to client ===\n", file_to_send);
-
-        // Envio o nome da página
-        //sendString(*(&file_to_send), consocket);
-        sendString(file_to_send, consocket);
-/*
-        // Configura string para criar arquivo dentro do diretório correto
-        //char * path_to_html_file_on_proxy = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
-        char path_to_html_file_on_proxy[ LENGTH_DIR_PATH ];
-        memset( path_to_html_file_on_proxy, 0, LENGTH_DIR_PATH );
-        strcpy( path_to_html_file_on_proxy, PROXY_DIRECTORY );
-        strcat( path_to_html_file_on_proxy, "/" );
-        strcat( path_to_html_file_on_proxy, file_to_send );
-
-        //printf(">>%s", path_to_html_file_on_proxy);
-
-        // char * string_line_from_file = (char *) calloc( N_BYTES_TO_SEND + 1, sizeof(char));
-        char string_line_from_file[ N_BYTES_TO_SEND + 1 ];
-        memset( string_line_from_file, 0, N_BYTES_TO_SEND + 1);
-        FILE * p = fopen(path_to_html_file_on_proxy, "r");
-
-        int number_of_bytes_reads = 0; // contador para content_length
-        int pos = 0; // indice para armazenar o caracter
-
-        while( 1 ){
-
-            char c = fgetc( p );
-
-            if( c == EOF ){
-                sendString2(*(&string_line_from_file), consocket);
-                break;
-            }
-
-            if( strlen(string_line_from_file) == N_BYTES_TO_SEND){
-                sendString2(*(&string_line_from_file), consocket);
-                memset(string_line_from_file, 0, N_BYTES_TO_SEND + 1);
-                pos = 0;
-            }
-            *(string_line_from_file + pos) = c;
-            number_of_bytes_reads++;
-            pos++;
-        }
-
-        printf("\t=== File %s sended to %s ===\n",  path_to_html_file_on_proxy, send_to_directory);
-        printf("\t=== %d bytes reads ===\n", number_of_bytes_reads);
-
-        fclose(p);
-
-        // free(file_to_send);
-        // free(path_to_html_file_on_proxy);
-        //free(string_line_from_file);
-*/
-    }else{
-        // entrega o site para o cliente
-        printf("\t=== Page on proxy! Sending to client! ===\n");
-
-        sendPageToClient(node, send_to_directory, consocket);
-
-        free(str);
-    }
-
-    //close(consocket);
+    close(pt->clientSocket);
 
     return (void*) 0;
 
 }
 
-
 void * handleClientConnection( void * ptr ){
 
-    int* inteiro = (int*) ptr;
+    //int* inteiro = (int*) ptr;
     bool runClient = true;
     ClientArguments_t * pt = (ClientArguments_t *) ptr;
-
-    printf("\t=== Proxy server receiving message from client %d ===\n", *inteiro);
+    struct sockaddr_in dest = *(pt->dest);
+    //printf("[+] Thread %d\n", *inteiro);
+    printf("\t=== Proxy server receiving message from client %d ===\n", pt->clientSocket);
+    //printf("----> %s <----\n", inet_ntoa(dest.sin_addr));
 
     while( runClient ){
 
-        int consocket = pt->socket;
+        int consocket = pt->clientSocket;
 
         //Recebe o ID do comando a ser processado
         int commandReceived_id = 0;
@@ -313,86 +204,48 @@ void * handleClientConnection( void * ptr ){
 
               if( n > 0 ){
 
+                  int serverSocket = pt->serverSocket;
                   pthread_t search_t[ n ];
                   char * send_to_directory = recvString(consocket);
                   SearchArguments_t searchArgs_t[ n ];
 
+                  memset(&searchArgs_t, 0, n*sizeof(SearchArguments_t));
+
+                  socklen_t socksize = sizeof(struct sockaddr_in);
                   for ( int i = 0; i < n; i++ ){
 
-                      //searchArgs_t[ i ].serverSocket = pt->serverSocket;//searchConSocket;
-                      searchArgs_t[ i ].directory = send_to_directory;
-
+                      int teste = accept(serverSocket, (struct sockaddr *)&dest, &socksize);
                       // Recebe o argumento (site) enviado do cliente
-                      char * str = recvString(consocket);
-                      searchArgs_t[ i ].site = str;
+                      // char * str = recvString(consocket);
+                      // char * str = recvString(teste);
+                      //printf("[%d] %s\n", i, str);
+                      // searchArgs_t[ i ].site = str;
+                      searchArgs_t[ i ].tid = i;
+                      // searchArgs_t[ i ].clientSocket = consocket;
 
-                      //int searchConSocket = acceptSearchConnectionSocket(serverSocket);
-                      struct sockaddr_in dest;
-                      socklen_t socksize = sizeof(struct sockaddr_in);
-                      int searchConSocket = accept(pt->serverSocket, (struct sockaddr *)&dest, &socksize);
-                      searchArgs_t[ i ].socket = searchConSocket;
+                      searchArgs_t[ i ].clientSocket = teste;
 
-                      // cria uma thread para processar a busca
                       int error_t = pthread_create( &search_t[ i ], NULL, handleSearch, &searchArgs_t[ i ] );
 
                       if(error_t){
-                          printf("\t=== [search] Error: Thread could not be created! ===\n");
+                          printf("\t=== Sorry! The thread could not be created! ===\n");
+                          continue;
                       }
-
+                      ///teste = accept(serverSocket, (struct sockaddr *)&dest, &socksize);
 
                   }
 
-                  void * returnValue = NULL;
+                  void * retVal = NULL;
 
                   for( int j = 0; j < n; j++ ){
 
-                      int success = pthread_join( search_t[ j ], returnValue );
+                      int success = pthread_join( search_t[ j ], retVal );
                       if(success != 0){
                           printf("Error on thread_id %ld!\n", search_t[ j ]);
                       }
 
-                      close(searchArgs_t[ j ].socket);
-
                   }
 
-                  /////////////////////////////////////////////////////
-                  // for( int i = 0; i < n; i++ ){
-                  //     // Recebe o argumento (site) enviado do cliente
-                  //     char * str = recvString(consocket);
-                  //
-                  //     LinkedList * node = searchInHash(str, hashArray);
-                  //
-                  //     if( node == NULL ){
-                  //         // busca na internet
-                  //
-                  //         printf("\t=== Searching for site ===\n");
-                  //
-                  //         int content_length = http(str);
-                  //
-                  //         // sem_wait(&sem1);
-                  //         pthread_mutex_lock(&mutex);
-                  //         // Inclui na hash
-                  //         node = createNode(str, content_length, hashArray);
-                  //         // sem_post(&sem1);
-                  //         pthread_mutex_unlock(&mutex);
-                  //
-                  //         printf("\t=== HTML file available on proxy ===\n");
-                  //         printf("\t      %s", ctime(&node->creation_time));
-                  //
-                  //         // entrega o site para o cliente
-                  //         sendPageToClient(node, send_to_directory, consocket);
-                  //
-                  //     }else{
-                  //         // entrega o site para o cliente
-                  //         printf("\t=== Page on proxy! Sending to client! ===\n");
-                  //
-                  //         sendPageToClient(node, send_to_directory, consocket);
-                  //
-                  //         free(str);
-                  //     }
-                  //
-                  // }
-                  /////////////////////////////////////////////////////
                   free(send_to_directory);
               }
 
@@ -408,9 +261,9 @@ void * handleClientConnection( void * ptr ){
 
           case EXIT_ID:
               printf("[EXIT COMMAND]\n");
+              printf("\t=== Client %d disconnected! ===\n", consocket);
+              printf("\t=== Server says bye bye to client %d! ===\n", consocket);
               close(consocket);
-              printf("\t=== Client %d disconnected! ===\n", *inteiro);
-              printf("\t=== Server says bye bye to client %d! ===\n", *inteiro);
               runClient = false;
               break;
 
@@ -421,32 +274,28 @@ void * handleClientConnection( void * ptr ){
 
 }
 
-int serverConection(char * argv[]){
-
-    struct sockaddr_in serv; // socket info about our server
-    int serverSocket;        // socket used to listen for incoming connections
+int serverConection( int port, struct sockaddr_in serv ){
 
     memset(&serv, 0, sizeof(serv));             // zero the struct before filling the fields
     serv.sin_family = AF_INET;                  // set the type of connection to TCP/IP
     serv.sin_addr.s_addr = htonl(INADDR_ANY);   // set our address to any interface
-    serv.sin_port = htons( atoi( argv[ 1 ] ) ); // set the server port number
+    serv.sin_port = htons( port ); // set the server port number
 
-    serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    int serverSocket = socket(AF_INET, SOCK_STREAM, 0); // socket used to listen for incoming connections
 
     // bind serv information to mysocket
     bind(serverSocket, (struct sockaddr *)&serv, sizeof(struct sockaddr));
 
     // start listening, allowing a queue of up to 1 pending connection
-    listen(serverSocket, 1);
+    listen(serverSocket, 100);
 
-    printf("\t=== Server is waiting for connections on port: %s ===\n", argv[ 1 ] );
+    printf("\t=== Server is waiting for connections on port: %d ===\n", port );
 
     return serverSocket;
 }
 
-int acceptConnectionSocket(int serverSocket){
+int acceptConnectionSocket( int serverSocket, struct sockaddr_in dest ){
 
-    struct sockaddr_in dest; // socket info about the machine connecting to us
     socklen_t socksize = sizeof(struct sockaddr_in);
 
     int consocket = accept(serverSocket, (struct sockaddr *)&dest, &socksize);
@@ -539,7 +388,9 @@ int main(int argc, char *argv[]){
 
     alarm( TIME_INTERVAL ); // Scheduled alarm after 20 seconds
 
-    int serverSocket = serverConection(argv);
+    struct sockaddr_in serv; // socket info about our server
+    int port = atoi( argv[ 1 ] );
+    int serverSocket = serverConection( port, serv );
 
     if(serverSocket == COMMUNICATION_ERROR){
         return COMMUNICATION_ERROR;
@@ -550,7 +401,7 @@ int main(int argc, char *argv[]){
 
     pthread_t threads[ NUM_THREADS ];
 
-    if ( pthread_mutex_init(&mutex, NULL) != 0){
+    if ( pthread_mutex_init(&lock, NULL) != 0){
       printf("Mutex init failed\n");
       return EXIT_FAILURE;
     }
@@ -559,9 +410,13 @@ int main(int argc, char *argv[]){
 
     memset(&hashArray, 0, TABLE_SIZE*sizeof(Hash));
 
+    socklen_t socksize = sizeof(struct sockaddr_in);
+
     while( runServer ){
 
-        int consocket = acceptConnectionSocket(serverSocket);
+        struct sockaddr_in dest; // socket info about the machine connecting to us
+        int consocket = accept(serverSocket, (struct sockaddr *)&dest, &socksize);
+        //int consocket = acceptConnectionSocket( serverSocket, dest );
 
         if(consocket == COMMUNICATION_ERROR){
 
@@ -571,17 +426,21 @@ int main(int argc, char *argv[]){
 
             printf("Client connection failed!\n");
             continue;
+        }else{
+            printf("\t=== Incoming connection from %s ===\n", inet_ntoa(dest.sin_addr));
         }
 
         ClientArguments_t * pt = calloc(1, sizeof(ClientArguments_t));
-        pt->socket = consocket;
-        pt->port = atoi( argv[ 1 ] );
+        pt->clientSocket = consocket;
+        pt->port = port;
         pt->serverSocket = serverSocket;
+        pt->dest = &dest;
+        printf("\t=== server socket: %d | client socket: %d | port: %d | destination: %s ===\n", pt->serverSocket, pt->clientSocket, pt->port, inet_ntoa(dest.sin_addr) );
 
         int error_t = pthread_create( &threads[ i ], NULL, handleClientConnection, pt );
 
         if(error_t){
-            printf("\t=== Sorry! The thread could not be created!\n ===");
+            printf("\t=== Sorry! The thread could not be created! ===\n");
             free(pt);
             continue;
         }
@@ -591,11 +450,12 @@ int main(int argc, char *argv[]){
 
     }
 
-    void * returnValue = NULL;
 
     for( int j = 0; j < i; j++ ){
 
-        int success = pthread_join( threads[ j ], returnValue );
+        void * returnValue = NULL;
+
+        int success = pthread_join( threads[ j ], &returnValue );
         if(success != 0){
             printf("Error on thread_id %ld!\n", threads[ j ]);
         }
@@ -605,7 +465,7 @@ int main(int argc, char *argv[]){
 
     // pthread_exit(NULL);
 
-    pthread_mutex_destroy(&mutex);
+    pthread_mutex_destroy(&lock);
     removeHash(hashArray);
     close(serverSocket);
     return EXIT_SUCCESS;
