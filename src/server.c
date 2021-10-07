@@ -21,7 +21,7 @@
 
 #include "../include/communication.h"
 #include "../include/hashServer.h"
-#include "../include/http.h"
+#include "../include/http2.h"
 #include "../include/directories.h"
 
 #define TIME_INTERVAL 20
@@ -135,9 +135,37 @@ void * handleSearch( void * ptr ){
 
     char * str = recvString(pt->clientSocket);
     pt->site = str;
-    printf("Thread %d: %s | Socket: %d\n", pt->tid, pt->site, pt->clientSocket);
-    //free(pt->site);
-    printf("recv on thread %d: %d\n", pt->tid, recvInt(pt->clientSocket));
+    // printf("Thread %d: %s | Socket: %d\n", pt->tid, pt->site, pt->clientSocket);
+    // printf("recv on thread %d: %d\n", pt->tid, recvInt(pt->clientSocket));
+
+    // Procura o site na proxy (hahstable)
+    LinkedList * node = searchInHashSynchronized(pt->site, hashArray);
+
+    if ( node == NULL ){ // Se o site não estiver na proxy (hashtable)
+        //buca na internet
+        printf("\t=== Searching for site ===\n");
+        int content_length = http(pt->site);
+
+        // Inclui na hashtable
+        node = createNodeSynchronized(pt->site, content_length, hashArray);
+
+        printf("\t=== HTML file available on proxy ===\n");
+        printf("\t      %s", ctime(&node->creation_time));
+
+        // entrega o site para o  cliente
+        // sendPageToClient(node, send_to_directory, consocket);
+
+
+    }else{
+
+        // entrega o site para o cliente
+        printf("\t=== Page on proxy! Sending to client! ===\n");
+        // sendPageToClient(node, send_to_directory, consocket);
+
+        free(pt->site);
+    }
+
+
 
     close(pt->clientSocket);
 
@@ -222,6 +250,7 @@ void * handleClientConnection( void * ptr ){
                       // searchArgs_t[ i ].site = str;
                       searchArgs_t[ i ].tid = i;
                       // searchArgs_t[ i ].clientSocket = consocket;
+                      searchArgs_t[ i ].directory = send_to_directory;
 
                       searchArgs_t[ i ].clientSocket = teste;
 

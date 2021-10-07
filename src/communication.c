@@ -45,7 +45,7 @@ void sendString2( char * string, int socket ){
     int len_str = strlen(string);
     sendInt(len_str, socket);
     send(socket, string, sizeof(char)*(len_str + 1), 0);
-    printf(">>>>>> ::::: %s\n", string);
+    //printf(">>>>>> ::::: %s\n", string);
 }
 
 char * recvString( int socket ){

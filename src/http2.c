@@ -13,7 +13,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h> // sockaddr_in
 
-#include "../include/http.h"
+#include "../include/http2.h"
 #include "../include/directories.h"
 #include "../include/communication.h"
 
