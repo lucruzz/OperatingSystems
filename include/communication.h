@@ -26,6 +26,8 @@
 #define COMMAND_ID_NOT_FOUND -2
 
 #define COMMUNICATION_ERROR -1
+#define NODE_NOT_FOUND -3
+#define NODE_FOUND 3
 
 void sendInt( int intNumber, int socket );
 int recvInt( int socket );

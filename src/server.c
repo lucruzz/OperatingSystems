@@ -129,6 +129,13 @@ LinkedList * createNodeSynchronized( char * str, int content_length, Hash hashAr
     return node;
 }
 
+LinkedList * removeNodeSynchronized( LinkedList * aux, LinkedList * node, int index, Hash hashArray [] ){
+    pthread_mutex_lock(&lock);
+    node = remove_Hash_Node(aux, node, index, hashArray);
+    pthread_mutex_unlock(&lock);
+    return node;
+}
+
 void * handleSearch( void * ptr ){
 
     SearchArguments_t * pt = ( SearchArguments_t * ) ptr;
@@ -142,9 +149,11 @@ void * handleSearch( void * ptr ){
     LinkedList * node = searchInHashSynchronized(pt->site, hashArray);
 
     if ( node == NULL ){ // Se o site não estiver na proxy (hashtable)
+
         //buca na internet
         printf("\t=== Searching for site ===\n");
         int content_length = http(pt->site);
+
 
         // Inclui na hashtable
         node = createNodeSynchronized(pt->site, content_length, hashArray);
@@ -340,54 +349,53 @@ void verifyHashtable( int signum ){
 
   int i = 0;
 
-  while( i < TABLE_SIZE ){
+    while( i < TABLE_SIZE ){
 
-    if( hashArray[i].begin != NULL ){
+        if( hashArray[i].begin != NULL ){
 
-        LinkedList * node = hashArray[i].begin;
-        LinkedList * aux = node;
+            LinkedList * node = hashArray[i].begin;
+            LinkedList * aux = node;
 
-        while( node != NULL ){
+            while( node != NULL ){
 
-            time_t now = time( NULL );
-            double timeDifference = difftime( now, node->creation_time );
+                time_t now = time( NULL );
+                double timeDifference = difftime( now, node->creation_time );
 
-            if(timeDifference > MAX_TIME){
+                if(timeDifference > MAX_TIME){
 
-                char * pt = memrchr(node->site, '/', strlen(node->site)) + 1;
-                char * file = (char *) calloc (strlen(pt) + 1, sizeof(char) );
-                char * info_file = (char *) calloc (strlen(pt) + 6, sizeof(char) );
-                strcpy(file, pt);
-                strcpy(info_file, pt);
-                strcat(info_file, ".txt");
+                    char * pt = memrchr(node->site, '/', strlen(node->site)) + 1;
+                    char * file = (char *) calloc (strlen(pt) + 1, sizeof(char) );
+                    char * info_file = (char *) calloc (strlen(pt) + 6, sizeof(char) );
+                    strcpy(file, pt);
+                    strcpy(info_file, pt);
+                    strcat(info_file, ".txt");
 
-                node = remove_Hash_Node(aux, node, i, hashArray);
-                char * timeString = ctime( &now );
+                    node = removeNodeSynchronized(aux, node, i, hashArray);
+                    // node = remove_Hash_Node(aux, node, i, hashArray);
+                    char * timeString = ctime( &now );
 
-                removeFile( PROXY_DIRECTORY, file);
-                removeFile( INFO_PAGES_DIRECTORY, info_file);
+                    removeFile( PROXY_DIRECTORY, file);
+                    removeFile( INFO_PAGES_DIRECTORY, info_file);
 
-                printf("\t[file %s removed from proxy!]\n", file);
-                printf("Current time: %s\n", timeString);
+                    printf("\t[file %s removed from proxy!]\n", file);
+                    printf("Current time: %s\n", timeString);
 
-              	//printf("Time difference: %f\n", timeDifference);
+                  	//printf("Time difference: %f\n", timeDifference);
 
-                free(file);
-                free(info_file);
+                    free(file);
+                    free(info_file);
 
-                continue;
+                    continue;
+                }
+                aux = node;
+                node = node->next;
             }
-            aux = node;
-            node = node->next;
+
         }
+      i++;
 
     }
-    i++;
-
-  }
-
-	alarm( TIME_INTERVAL );
-
+    alarm( TIME_INTERVAL );
 }
 
 void  closeProxy(int sig){
