@@ -114,21 +114,21 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
 
 }
 
+// Wrapper for seaching (embrulho)
 LinkedList * searchInHashSynchronized( char * str, Hash hashArray[] ){
     pthread_mutex_lock(&lock);
     LinkedList * node = searchInHash(str, hashArray);
     pthread_mutex_unlock(&lock);
     return node;
 }
-
-// Wrapper (embrulho)
+// Wrapper for creating node on hash (embrulho)
 LinkedList * createNodeSynchronized( char * str, int content_length, Hash hashArray[] ){
     pthread_mutex_lock(&lock);
     LinkedList * node = createNode(str, content_length, hashArray);
     pthread_mutex_unlock(&lock);
     return node;
 }
-
+// Wrapper for removing (embrulho)
 LinkedList * removeNodeSynchronized( LinkedList * aux, LinkedList * node, int index, Hash hashArray [] ){
     pthread_mutex_lock(&lock);
     node = remove_Hash_Node(aux, node, index, hashArray);
@@ -150,9 +150,10 @@ void * handleSearch( void * ptr ){
 
     if ( node == NULL ){ // Se o site não estiver na proxy (hashtable)
 
+        int socket = pt->clientSocket;
         //buca na internet
         printf("\t=== Searching for site ===\n");
-        int content_length = http(pt->site);
+        int content_length = http(pt->site, &socket);//, pt->clientSocket);
 
 
         // Inclui na hashtable
@@ -412,6 +413,7 @@ void  closeProxy(int sig){
           signal(SIGINT, closeProxy);
      getchar(); // Get new line character
 }
+
 
 int main(int argc, char *argv[]){
 

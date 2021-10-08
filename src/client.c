@@ -126,6 +126,10 @@ void * search_function_multithread( void * ptr ){
 
     sendString(pt->site, pt->clientSocket);
 
+    int a = 0;
+    a = recvInt(pt->clientSocket);
+    printf(">>>>> %d\n", a);
+
 
     // printf("Thread %d: %s | Socket: %d\n", pt->tid, pt->site, pt->clientSocket);
     // sendInt(2, pt->clientSocket);

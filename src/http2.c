@@ -323,7 +323,45 @@ bool checkURL( char * url ){
 }
 
 
-int http( char * url ){
+int http( char * url, int * clientSocket ){
+
+    if( !checkURL( url ) ){ // Se a url não estiver de acordo com os parâmetros do programa
+        return ERROR_URL_NOT_HTTP; // retorna que deu ruim
+    }
+
+    char * serverIP = getWebsiteServer( url );
+
+    struct addrinfo * result = getWebsiteSocket( serverIP );
+    free(serverIP);
+
+    int connection_socket = conncetionWebsiteSocket( url, result );
+    free(result);
+
+    sendInt(2, *clientSocket);
+
+    char * info_file = getHTMLinformation( url, connection_socket );
+    int len = getHTMLlength( info_file );
+
+    if(len == CONTENT_LENGTH_NOT_FOUND){
+        printf("\tNo page content-length found!\n");
+        len = getHTML_With_No_Length_Found( info_file, connection_socket );
+    }else{
+        printf("\tPage content-length found: %d\n", len);
+      	getHTML( info_file, len, connection_socket );
+    }
+
+    free(info_file);
+    close(connection_socket);
+
+    printf("\tHTML page collected!\n");
+
+    return len;
+
+}
+
+
+/* int http( char * url )
+{
 
     if( !checkURL( url ) ){ // Se a url não estiver de acordo com os parâmetros do programa
         return ERROR_URL_NOT_HTTP; // retorna que deu ruim
@@ -356,3 +394,5 @@ int http( char * url ){
     return len;
 
 }
+
+*/
