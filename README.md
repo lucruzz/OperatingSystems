@@ -1,5 +1,14 @@
 # Operating Systems Project
-Comming soon...
+
+## To run
+To run this program open a terminal to be the server and type:
+```
+./bin/server 5000
+```
+Open a second terminal representing the client and enter the command:
+```
+./bin/client clients/client1/ 5000
+```
 
 ## Sites for testing
 http://web.ist.utl.pt/luis.tarrataca/hello.html
