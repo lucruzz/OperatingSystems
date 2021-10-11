@@ -38,6 +38,7 @@ typedef struct ClientInformation{
 
 typedef struct SearchInformation_t{
     struct sockaddr_in * serv_dest;
+    struct sockaddr_in t;
     char * directory;
     char * site;
     int clientSocket;
@@ -121,22 +122,88 @@ void * search_function_multithread( void * ptr ){
 
     SearchInformation_t * pt = (SearchInformation_t *) ptr;
 
-    // struct sockaddr_in serv_dest = *(pt->serv_dest);
-    // int connectResult = connect(pt->clientSocket, (struct sockaddr *)&serv_dest, sizeof(struct sockaddr_in));
+    int sendSocket = socket(AF_INET, SOCK_STREAM, 0);
+    pt->clientSocket = sendSocket;
+    int connectResult = connect(pt->clientSocket, (struct sockaddr *)&(pt->t), sizeof(struct sockaddr_in));
 
+    // Sinalizo a inicialização da thread
+    char * s = recvString(pt->clientSocket);
+    printf("%s\n", s);
+    free(s);
+
+    // Envio o site a ser buscado
     sendString(pt->site, pt->clientSocket);
 
-    int a = 0;
-    a = recvInt(pt->clientSocket);
-    printf(">>>>> %d\n", a);
+    int found = recvInt(pt->clientSocket);
 
+    if(found == NODE_NOT_FOUND){
+        printf("[+] Proxy is searching on the internet!\n");
+        int content_length = recvInt(pt->clientSocket);
+        printf("[+] content-Length: %d\n", content_length);
+    }else{
+        printf("[+] Page on proxy!\n");
+    }
+/*
+    // Recebo a quantidade de bytes da página a ser recebida
+    int n_bytes_to_recv = recvInt(pt->clientSocket);
+    printf("\t=== Content-Length: %d ===\n", n_bytes_to_recv);
 
-    // printf("Thread %d: %s | Socket: %d\n", pt->tid, pt->site, pt->clientSocket);
-    // sendInt(2, pt->clientSocket);
+    // Recebo o nome da paǵina (http.c)
+    char * page_filename = recvString(pt->clientSocket);
 
+    // Eu acho que eu não preciso saber o diretório... Porque eu vou receber com o socket
+    // Envio o nome do diretório (http.c)
+    // sendString(pt->directory, pt->clientSocket);
 
+    int length_str_page_filename = strlen(page_filename);
+    int length_str_directory = strlen(pt->directory);
 
-    //free(pt->site);
+    int total_full_length_to_file = length_str_directory + length_str_page_filename;
+
+    // Aloco uma string com o tamanho total do caminho para o arquivo
+    char * full_path_file = ( char * ) calloc(total_full_length_to_file + 2, sizeof(char));
+    strcat(full_path_file, pt->directory);
+    strcat(full_path_file, "/");
+    strcat(full_path_file, page_filename);
+
+    // Abro o arquivo para armazenar a página "no lado" cliente
+    FILE * p = fopen(full_path_file, "w");
+
+    free(page_filename);
+    free(full_path_file);
+
+    // char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
+    char * page_recv = (char *) calloc(N_BYTES_TO_RECV, sizeof(char));
+
+    int bytes_recv = 0;
+
+    while(1){
+
+        // int bytes = recvString2(page_recv, mysocket);
+        // int bytes = recv( pt->clientSocket, page_recv, N_BYTES_TO_RECV*sizeof(char), 0);
+        int bytes = recvString2(page_recv, pt->clientSocket);
+        // printf("strlen(): %d | bytes reads: %d\n", (int)strlen(page_recv), bytes);
+
+        fputs(page_recv, p);
+
+        bytes_recv += bytes;
+        //printf("bytes reads> %d\n", bytes_recv);
+
+        // if(bytes % N_BYTES_TO_RECV != 0)
+        //    break;
+
+        if( bytes_recv % n_bytes_to_recv == 0){
+            printf("bytes reads> %d\n", bytes_recv);
+            break;
+        }
+
+        memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
+    }
+
+    free(page_recv);
+    fclose(p);
+    printf("\t=== Page received from proxy! ===\n");
+*/
     close(pt->clientSocket);
 
     return (void *) 0;
@@ -176,17 +243,12 @@ void search(char *command, ClientInformation * ptr){
         memset(&searchArgs_t, 0, n*sizeof(SearchInformation_t));
         for ( int i = 0; i < n; i++ ){
 
-            // Envia o argumento (site) para o Servidor
-            // sendString(list_ptr[ i ]->argument, mysocket);
-
+            // int sendSocket = socket(AF_INET, SOCK_STREAM, 0);
+            // searchArgs_t[ i ].clientSocket = sendSocket;
             searchArgs_t[ i ].site = list_ptr[ i ]->argument;
+            searchArgs_t[ i ].serv_dest = (ptr->serv_dest);
+            searchArgs_t[ i ].t = *(ptr->serv_dest);
             searchArgs_t[ i ].tid = i;
-            // searchArgs_t[ i ].clientSocket = mysocket;
-
-            int teste = socket(AF_INET, SOCK_STREAM, 0);
-            searchArgs_t[ i ].clientSocket = teste;
-            searchArgs_t[ i ].serv_dest = &serv_dest;
-            int connectResult = connect(teste, (struct sockaddr *)&serv_dest, sizeof(struct sockaddr_in));
 
             int error_t = pthread_create( &search_t[ i ], NULL, search_function_multithread, &searchArgs_t[ i ] );
 

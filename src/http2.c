@@ -84,12 +84,12 @@ struct addrinfo * getWebsiteSocket( char * url ){
     return result;
 }
 
-int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
+int * conncetionWebsiteSocket( char * url, struct addrinfo * result ){
 
     struct sockaddr * destinationSocket = result->ai_addr;
 
     int connection_socket = socket( result->ai_family, result->ai_protocol, 0);
-
+    //printf("%d\n", connection_socket);
     if (connection_socket == ERROR){
         perror("Socket error");
         exit(EXIT_FAILURE);
@@ -117,10 +117,13 @@ int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
     puts("\tSending request...");
     send( connection_socket, request, number_of_bytes, 0 );
 
-    return connection_socket;
+    int * p = &connection_socket;
+
+    //return connection_socket;
+    return p;
 }
 
-char * getHTMLinformation( char * url, int connection_socket ){
+char * getHTMLinformation( char * url, int * connection_socket ){
 
     // Adiciona a extensão txt para armazenar as informações da página
     int length_url = strlen(url);
@@ -147,7 +150,7 @@ char * getHTMLinformation( char * url, int connection_socket ){
 
     while( 1 ){
 
-        int head_number_of_bytes = recv( connection_socket, &info_char, 1*sizeof(char), 0);
+        int head_number_of_bytes = recv( *connection_socket, &info_char, 1*sizeof(char), 0);
 
         *(page_info + index) = info_char;
         index += head_number_of_bytes;
@@ -218,18 +221,22 @@ int getHTMLlength( char * info_file ){
     return CONTENT_LENGTH_NOT_FOUND;
 }
 
-void getHTML( char * info_file, int len, int connection_socket ){
+void getHTML( char * info_file, int len, int connection_socket, int clientSocket ){
 
     int lenght_info_file = strlen(info_file);
     char * html_file = (char *) calloc (lenght_info_file, sizeof(char));
     strncpy( html_file, info_file, lenght_info_file - 4 );
     // free(info_file);
 
+    // Envio o nome da página para o cliente
+    sendString(html_file, clientSocket);
+
     // Configura string para criar arquivo dentro do diretório correto
     char * path_to_html_file = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
     strcpy( path_to_html_file, PROXY_DIRECTORY );
     strcat( path_to_html_file, "/" );
     strcat( path_to_html_file, html_file );
+
 
     FILE * html_page = fopen (path_to_html_file, "w");
 
@@ -238,7 +245,8 @@ void getHTML( char * info_file, int len, int connection_socket ){
     //int plus_size = len - (len % N_BYTES_TO_RECV);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
 
     // char string_from_page[N_BYTES_TO_RECV];
-    char * string_from_page = (char*) calloc ( N_BYTES_TO_RECV + 1, sizeof( char ) );
+    // char * string_from_page = (char*) calloc ( N_BYTES_TO_RECV + 1, sizeof( char ) );
+    char * string_from_page = (char*) calloc ( N_BYTES_TO_RECV, sizeof( char ) );
     int index = 0;
     // memset(&string_from_page, 0, sizeof(char));
     //memset(string_from_page, 0, N_BYTES_TO_RECV*sizeof(char) + 1);
@@ -246,17 +254,26 @@ void getHTML( char * info_file, int len, int connection_socket ){
     // int k = 0;
     while( 1 ){
         // int page_number_of_bytes = recv( connection_socket, &string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
-        int page_number_of_bytes = recv( connection_socket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
+        //int page_number_of_bytes = recv( connection_socket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
+        int page_number_of_bytes = recvString2(string_from_page, connection_socket);
+        //send( clientSocket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
+        //printf("%s\n", string_from_page);
+        //printf("---> strlen(): %d | bytes reads: %d<---\n", (int)strlen(string_from_page), page_number_of_bytes);
+        // send( clientSocket, "oi", 2*sizeof(char), 0);
+        // sendString2( string_from_page, page_number_of_bytes, clientSocket );
+
 
         index += page_number_of_bytes;
         //fprintf (html_page, "%s", string_from_page);
         fputs(string_from_page, html_page);
 
         if( index % len == 0){
+            printf("bytes reads> %d\n", index);
             break;
         }
         // memset(&string_from_page, 0, sizeof(char));
-        memset(string_from_page, 0, N_BYTES_TO_RECV*sizeof(char) + 1);
+        // memset(string_from_page, 0, N_BYTES_TO_RECV*sizeof(char) + 1);
+        memset(string_from_page, 0, N_BYTES_TO_RECV*sizeof(char) );
     }
 
     fclose(html_page);
@@ -333,27 +350,27 @@ int http( char * url, int * clientSocket ){
 
     struct addrinfo * result = getWebsiteSocket( serverIP );
     free(serverIP);
-
-    int connection_socket = conncetionWebsiteSocket( url, result );
+    int * connection_socket = conncetionWebsiteSocket( url, result );
     free(result);
-
-    sendInt(2, *clientSocket);
 
     char * info_file = getHTMLinformation( url, connection_socket );
     int len = getHTMLlength( info_file );
 
+    // envio para o cliente o número de bytes da página solicitada
+    sendInt(len, *clientSocket);
+/*
     if(len == CONTENT_LENGTH_NOT_FOUND){
-        printf("\tNo page content-length found!\n");
-        len = getHTML_With_No_Length_Found( info_file, connection_socket );
+        printf("\t=== No page content-length found! ===\n");
+        len = getHTML_With_No_Length_Found( info_file, *connection_socket );
     }else{
-        printf("\tPage content-length found: %d\n", len);
-      	getHTML( info_file, len, connection_socket );
+        printf("\t=== Page content-length found: %d ===\n", len);
+      	getHTML( info_file, len, *connection_socket, *clientSocket );
     }
-
+*/
     free(info_file);
-    close(connection_socket);
+    close(*connection_socket);
 
-    printf("\tHTML page collected!\n");
+    printf("\t=== HTML page collected! ===\n");
 
     return len;
 

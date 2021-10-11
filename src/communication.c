@@ -40,11 +40,10 @@ void sendString( char * string, int socket ){
     sendInt(len_str, socket);
     send(socket, string, sizeof(char)*(len_str + 1), 0); // +1 para o '\0'
 }
+// Esta função está igual a sendString
+void sendString2( char * string, int bytes, int socket ){
 
-void sendString2( char * string, int socket ){
-    int len_str = strlen(string);
-    sendInt(len_str, socket);
-    send(socket, string, sizeof(char)*(len_str + 1), 0);
+    send(socket, string, sizeof(char)*bytes, 0);
     //printf(">>>>>> ::::: %s\n", string);
 }
 
@@ -58,9 +57,12 @@ char * recvString( int socket ){
     return string;
 }
 
+// Função para receber os bytes lidos da conexão da proxy com a internet.
+// Note que aqui não há como prever o tamanho da string, eu preciso indicar diretamente
+// O número de bytes que desejo ler
 int recvString2( char * string, int socket ){
-    int len_str = 0;
-    len_str = recvInt(socket);
-    int bytes = recv(socket, string, sizeof(char)*(len_str + 1), 0);
+    // int len_str = 0;
+    // len_str = recvInt(socket);
+    int bytes = recv(socket, string, sizeof(char)*N_BYTES_TO_RECV, 0);
     return bytes;
 }

@@ -49,6 +49,7 @@ Hash hashArray[TABLE_SIZE];
 bool runServer;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
+/*
 void sendPageToClient( LinkedList * node, char  * send_to_directory, int consocket ){
 
     int content_length = node->content_length;
@@ -113,6 +114,7 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
     free(string_line_from_file);
 
 }
+*/
 
 // Wrapper for seaching (embrulho)
 LinkedList * searchInHashSynchronized( char * str, Hash hashArray[] ){
@@ -140,27 +142,30 @@ void * handleSearch( void * ptr ){
 
     SearchArguments_t * pt = ( SearchArguments_t * ) ptr;
 
-    char * str = recvString(pt->clientSocket);
-    pt->site = str;
-    // printf("Thread %d: %s | Socket: %d\n", pt->tid, pt->site, pt->clientSocket);
-    // printf("recv on thread %d: %d\n", pt->tid, recvInt(pt->clientSocket));
+    // Sinalizo a inicialização da thread
+    sendString("Searching for site...", pt->clientSocket);
+    // Recebo o site a ser procurado
+    char * site = recvString(pt->clientSocket);
+    pt->site = site;
 
     // Procura o site na proxy (hahstable)
     LinkedList * node = searchInHashSynchronized(pt->site, hashArray);
 
     if ( node == NULL ){ // Se o site não estiver na proxy (hashtable)
 
-        int socket = pt->clientSocket;
-        //buca na internet
-        printf("\t=== Searching for site ===\n");
-        int content_length = http(pt->site, &socket);//, pt->clientSocket);
+        sendInt(NODE_NOT_FOUND, pt->clientSocket);
 
+        // int socket = pt->clientSocket;
+        // printf("copied socket: %d | pointer copied socket: %p\n", socket, &(pt->clientSocket));//&socket);
+        // buca na internet
+        printf("[+] Searching for site\n");
+        int content_length = http(pt->site, &(pt->clientSocket));//&socket);//, pt->clientSocket);
 
         // Inclui na hashtable
-        node = createNodeSynchronized(pt->site, content_length, hashArray);
+        // node = createNodeSynchronized(pt->site, content_length, hashArray);
 
-        printf("\t=== HTML file available on proxy ===\n");
-        printf("\t      %s", ctime(&node->creation_time));
+        // printf("\t=== HTML file available on proxy ===\n");
+        // printf("\t      %s", ctime(&node->creation_time));
 
         // entrega o site para o  cliente
         // sendPageToClient(node, send_to_directory, consocket);
@@ -169,7 +174,7 @@ void * handleSearch( void * ptr ){
     }else{
 
         // entrega o site para o cliente
-        printf("\t=== Page on proxy! Sending to client! ===\n");
+        printf("[+] Page on proxy! Sending to client!\n");
         // sendPageToClient(node, send_to_directory, consocket);
 
         free(pt->site);
@@ -242,17 +247,20 @@ void * handleClientConnection( void * ptr ){
 
               if( n > 0 ){
 
-                  int serverSocket = pt->serverSocket;
+                  //int serverSocket = pt->serverSocket;
                   pthread_t search_t[ n ];
                   char * send_to_directory = recvString(consocket);
                   SearchArguments_t searchArgs_t[ n ];
 
                   memset(&searchArgs_t, 0, n*sizeof(SearchArguments_t));
 
-                  socklen_t socksize = sizeof(struct sockaddr_in);
                   for ( int i = 0; i < n; i++ ){
+                      socklen_t socksize = sizeof(struct sockaddr_in);
+                      struct sockaddr_in target = *(pt->dest);
+                      //printf("i1: %d\n", i);
 
-                      int teste = accept(serverSocket, (struct sockaddr *)&dest, &socksize);
+                      searchArgs_t[ i ].clientSocket = accept(pt->serverSocket, (struct sockaddr *)&target, &socksize);
+                      //printf("i2: %d | socket pointer: %p\n", i, &searchArgs_t[ i ].clientSocket);
                       // Recebe o argumento (site) enviado do cliente
                       // char * str = recvString(consocket);
                       // char * str = recvString(teste);
@@ -260,9 +268,9 @@ void * handleClientConnection( void * ptr ){
                       // searchArgs_t[ i ].site = str;
                       searchArgs_t[ i ].tid = i;
                       // searchArgs_t[ i ].clientSocket = consocket;
-                      searchArgs_t[ i ].directory = send_to_directory;
+                      //searchArgs_t[ i ].directory = send_to_directory;
 
-                      searchArgs_t[ i ].clientSocket = teste;
+                      //searchArgs_t[ i ].clientSocket = teste;
 
                       int error_t = pthread_create( &search_t[ i ], NULL, handleSearch, &searchArgs_t[ i ] );
 
@@ -270,7 +278,6 @@ void * handleClientConnection( void * ptr ){
                           printf("\t=== Sorry! The thread could not be created! ===\n");
                           continue;
                       }
-                      ///teste = accept(serverSocket, (struct sockaddr *)&dest, &socksize);
 
                   }
 
@@ -284,7 +291,6 @@ void * handleClientConnection( void * ptr ){
                       }
 
                   }
-
                   free(send_to_directory);
               }
 
