@@ -116,31 +116,37 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
 }
 */
 
-// Wrapper for seaching (embrulho)
-LinkedList * searchInHashSynchronized( char * str, Hash hashArray[] ){
+// Wrapper for seaching
+LinkedList * searchInHashSynchronized( char * str, Hash hashArray [] ){
     pthread_mutex_lock(&lock);
     LinkedList * node = searchInHash(str, hashArray);
     pthread_mutex_unlock(&lock);
     return node;
 }
-// Wrapper for creating node on hash (embrulho)
-LinkedList * createNodeSynchronized( char * str, int content_length, Hash hashArray[] ){
+// Wrapper for creating node on hash
+LinkedList * createNodeSynchronized( char * str, int content_length, Hash hashArray [] ){
     pthread_mutex_lock(&lock);
     LinkedList * node = createNode(str, content_length, hashArray);
     pthread_mutex_unlock(&lock);
     return node;
 }
-// Wrapper for removing (embrulho)
+// Wrapper for removing
 LinkedList * removeNodeSynchronized( LinkedList * aux, LinkedList * node, int index, Hash hashArray [] ){
     pthread_mutex_lock(&lock);
     node = remove_Hash_Node(aux, node, index, hashArray);
     pthread_mutex_unlock(&lock);
     return node;
 }
-
+/*
 void * handleSearch( void * ptr ){
 
     SearchArguments_t * pt = ( SearchArguments_t * ) ptr;
+    // puts("Fuck");
+    // socklen_t socksize = sizeof(struct sockaddr_in);
+    // struct sockaddr_in target = *(pt->dest);
+    //
+    // int sock = accept(pt->serverSocket, (struct sockaddr *)&target, &socksize);
+    // pt->clientSocket = sock;
 
     // Sinalizo a inicialização da thread
     sendString("Searching for site...", pt->clientSocket);
@@ -159,7 +165,7 @@ void * handleSearch( void * ptr ){
         // printf("copied socket: %d | pointer copied socket: %p\n", socket, &(pt->clientSocket));//&socket);
         // buca na internet
         printf("[+] Searching for site\n");
-        int content_length = http(pt->site, &(pt->clientSocket));//&socket);//, pt->clientSocket);
+        //int content_length = http(pt->site, &(pt->clientSocket));//&socket);//, pt->clientSocket);
 
         // Inclui na hashtable
         // node = createNodeSynchronized(pt->site, content_length, hashArray);
@@ -187,16 +193,12 @@ void * handleSearch( void * ptr ){
     return (void*) 0;
 
 }
-
+*/
 void * handleClientConnection( void * ptr ){
 
-    //int* inteiro = (int*) ptr;
     bool runClient = true;
     ClientArguments_t * pt = (ClientArguments_t *) ptr;
-    struct sockaddr_in dest = *(pt->dest);
-    //printf("[+] Thread %d\n", *inteiro);
-    printf("\t=== Proxy server receiving message from client %d ===\n", pt->clientSocket);
-    //printf("----> %s <----\n", inet_ntoa(dest.sin_addr));
+    printf("[+] Proxy server processing requests on socket %d\n", pt->clientSocket);
 
     while( runClient ){
 
@@ -242,56 +244,36 @@ void * handleClientConnection( void * ptr ){
           case SEARCH_ID:
               printf("[SEARCH COMMAND]\n");
 
-              // Recebe o número de argumentos (sites) a serem processados
+              // Recebo o número de sites que vão ser processados
               int n = recvInt(consocket);
 
-              if( n > 0 ){
+              if( n == 1 ){
+                  // Processo o pedido (abro uma thread no lado cliente)
+                  char * site = recvString(consocket);
+                  printf("[+] Searching for site: %s\n", site);
 
-                  //int serverSocket = pt->serverSocket;
-                  pthread_t search_t[ n ];
-                  char * send_to_directory = recvString(consocket);
-                  SearchArguments_t searchArgs_t[ n ];
+                  LinkedList * node = searchInHashSynchronized(site, hashArray);
 
-                  memset(&searchArgs_t, 0, n*sizeof(SearchArguments_t));
+                  if ( node == NULL ){
 
-                  for ( int i = 0; i < n; i++ ){
-                      socklen_t socksize = sizeof(struct sockaddr_in);
-                      struct sockaddr_in target = *(pt->dest);
-                      //printf("i1: %d\n", i);
+                    // Busca na internet
+                    int content_length = http(site, &consocket);
 
-                      searchArgs_t[ i ].clientSocket = accept(pt->serverSocket, (struct sockaddr *)&target, &socksize);
-                      //printf("i2: %d | socket pointer: %p\n", i, &searchArgs_t[ i ].clientSocket);
-                      // Recebe o argumento (site) enviado do cliente
-                      // char * str = recvString(consocket);
-                      // char * str = recvString(teste);
-                      //printf("[%d] %s\n", i, str);
-                      // searchArgs_t[ i ].site = str;
-                      searchArgs_t[ i ].tid = i;
-                      // searchArgs_t[ i ].clientSocket = consocket;
-                      //searchArgs_t[ i ].directory = send_to_directory;
+                    // Inclui na hashtable
+                    node = createNodeSynchronized(site, content_length, hashArray);
 
-                      //searchArgs_t[ i ].clientSocket = teste;
+                    printf("[+] HTML file available on proxy!\n");
+                    printf("[+] %s", ctime(&node->creation_time));
 
-                      int error_t = pthread_create( &search_t[ i ], NULL, handleSearch, &searchArgs_t[ i ] );
-
-                      if(error_t){
-                          printf("\t=== Sorry! The thread could not be created! ===\n");
-                          continue;
-                      }
+                    // entrega o site para o  cliente
+                    // sendPageToClient(node, send_to_directory, consocket);
 
                   }
 
-                  void * retVal = NULL;
 
-                  for( int j = 0; j < n; j++ ){
 
-                      int success = pthread_join( search_t[ j ], retVal );
-                      if(success != 0){
-                          printf("Error on thread_id %ld!\n", search_t[ j ]);
-                      }
-
-                  }
-                  free(send_to_directory);
+                  free(site);
+                  // Dentro da thread, vai receber
               }
 
               break;
@@ -306,13 +288,88 @@ void * handleClientConnection( void * ptr ){
 
           case EXIT_ID:
               printf("[EXIT COMMAND]\n");
-              printf("\t=== Client %d disconnected! ===\n", consocket);
-              printf("\t=== Server says bye bye to client %d! ===\n", consocket);
+              // printf("\t=== Client %d disconnected! ===\n", consocket);
+              // printf("\t=== Server says bye bye to client %d! ===\n", consocket);
+              printf("[+] Closing socket %d\n", consocket);
               close(consocket);
               runClient = false;
               break;
 
         }
+    }
+
+    return (void*) 0;
+
+}
+
+void * handleClientConnection2( void * ptr ){
+
+    bool runClient = true;
+    ClientArguments_t * pt = (ClientArguments_t *) ptr;
+
+    int consocket = pt->clientSocket;
+
+    //Recebe o ID do comando a ser processado
+    int commandReceived_id = 0;
+    commandReceived_id = recvInt(consocket);
+
+    switch (commandReceived_id) {
+
+      case LIST_ID:
+          printf("[LIST COMMAND]\n");
+          //printHash(hashArray);
+
+          int i = 0;
+
+          while( i < TABLE_SIZE ){
+
+              if(hashArray[i].begin == NULL){
+
+                  sendInt(0, consocket);
+
+              }else{
+
+                  LinkedList * node = hashArray[i].begin;
+                  int n = hashArray[i].n_elements;
+
+                  sendInt(n, consocket);
+
+                  for ( int j = 1; j <= n; j++ ){
+                      sendString(node->site, consocket);
+                      node = node->next;
+                  }
+
+              }
+              i++;
+
+          }
+
+          break;
+
+      case SEARCH_ID:
+          printf("[SEARCH COMMAND]\n");
+
+          char * s = recvString(consocket);
+          printf("%s\n", s);
+
+          break;
+
+      case HISTORY_ID:
+          printf("[HISTORY COMMAND]\n");
+          break;
+
+      case COMMAND_ID_NOT_FOUND:
+          printf("[COMMAND NOT FOUND]\n");
+          break;
+
+      case EXIT_ID:
+          printf("[EXIT COMMAND]\n");
+          printf("\t=== Client %d disconnected! ===\n", consocket);
+          printf("\t=== Server says bye bye to client %d! ===\n", consocket);
+          close(consocket);
+          runClient = false;
+          break;
+
     }
 
     return (void*) 0;
@@ -429,11 +486,11 @@ int main(int argc, char *argv[]){
     }
 
     signal( SIGALRM, verifyHashtable ); // Register signal handler
-    //signal(SIGINT, closeProxy); // Signal to close/exit Proxy server
+    // signal(SIGINT, closeProxy); // Signal to close/exit Proxy server
 
     alarm( TIME_INTERVAL ); // Scheduled alarm after 20 seconds
 
-    struct sockaddr_in serv; // socket info about our server
+    struct sockaddr_in serv; // srtuct info about server
     int port = atoi( argv[ 1 ] );
     int serverSocket = serverConection( port, serv );
 
@@ -471,18 +528,19 @@ int main(int argc, char *argv[]){
 
             printf("Client connection failed!\n");
             continue;
-        }else{
-            printf("\t=== Incoming connection from %s ===\n", inet_ntoa(dest.sin_addr));
         }
+        // else{
+        //    printf("[+] Incoming connection from %s\n", inet_ntoa(dest.sin_addr));
+        // }
 
-        ClientArguments_t * pt = calloc(1, sizeof(ClientArguments_t));
+        ClientArguments_t * pt = (ClientArguments_t *) calloc(1, sizeof(ClientArguments_t));
         pt->clientSocket = consocket;
         pt->port = port;
         pt->serverSocket = serverSocket;
         pt->dest = &dest;
-        printf("\t=== server socket: %d | client socket: %d | port: %d | destination: %s ===\n", pt->serverSocket, pt->clientSocket, pt->port, inet_ntoa(dest.sin_addr) );
+        // printf("\t=== server socket: %d | client socket: %d | port: %d | destination: %s ===\n", pt->serverSocket, pt->clientSocket, pt->port, inet_ntoa(dest.sin_addr) );
 
-        int error_t = pthread_create( &threads[ i ], NULL, handleClientConnection, pt );
+        int error_t = pthread_create( &threads[ i ], NULL, &handleClientConnection, (void *)pt );
 
         if(error_t){
             printf("\t=== Sorry! The thread could not be created! ===\n");

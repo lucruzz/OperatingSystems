@@ -18,8 +18,8 @@
 
 char * getWebsiteServer( char * );
 struct addrinfo * getWebsiteSocket( char * );
-int * conncetionWebsiteSocket( char * , struct addrinfo * );
-char * getHTMLinformation( char * , int * );
+int conncetionWebsiteSocket( char * , struct addrinfo * );
+char * getHTMLinformation( char * , int );
 int getHTMLlength( char * );
 void getHTML( char *, int , int, int );
 int getHTML_With_No_Length_Found( char *, int );

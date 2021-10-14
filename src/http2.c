@@ -84,7 +84,7 @@ struct addrinfo * getWebsiteSocket( char * url ){
     return result;
 }
 
-int * conncetionWebsiteSocket( char * url, struct addrinfo * result ){
+int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
 
     struct sockaddr * destinationSocket = result->ai_addr;
 
@@ -117,13 +117,11 @@ int * conncetionWebsiteSocket( char * url, struct addrinfo * result ){
     puts("\tSending request...");
     send( connection_socket, request, number_of_bytes, 0 );
 
-    int * p = &connection_socket;
+    return connection_socket;
 
-    //return connection_socket;
-    return p;
 }
 
-char * getHTMLinformation( char * url, int * connection_socket ){
+char * getHTMLinformation( char * url, int connection_socket ){
 
     // Adiciona a extensão txt para armazenar as informações da página
     int length_url = strlen(url);
@@ -150,7 +148,7 @@ char * getHTMLinformation( char * url, int * connection_socket ){
 
     while( 1 ){
 
-        int head_number_of_bytes = recv( *connection_socket, &info_char, 1*sizeof(char), 0);
+        int head_number_of_bytes = recv( connection_socket, &info_char, 1*sizeof(char), 0);
 
         *(page_info + index) = info_char;
         index += head_number_of_bytes;
@@ -238,6 +236,7 @@ void getHTML( char * info_file, int len, int connection_socket, int clientSocket
     strcat( path_to_html_file, html_file );
 
 
+
     FILE * html_page = fopen (path_to_html_file, "w");
 
     //printf("\tLENGTH HTML PAGE: %d\n", len);
@@ -254,14 +253,14 @@ void getHTML( char * info_file, int len, int connection_socket, int clientSocket
     // int k = 0;
     while( 1 ){
         // int page_number_of_bytes = recv( connection_socket, &string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
-        //int page_number_of_bytes = recv( connection_socket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
-        int page_number_of_bytes = recvString2(string_from_page, connection_socket);
+        int page_number_of_bytes = recv( connection_socket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
+        // int page_number_of_bytes = recvString2(string_from_page, connection_socket);
         //send( clientSocket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
         //printf("%s\n", string_from_page);
         //printf("---> strlen(): %d | bytes reads: %d<---\n", (int)strlen(string_from_page), page_number_of_bytes);
         // send( clientSocket, "oi", 2*sizeof(char), 0);
         // sendString2( string_from_page, page_number_of_bytes, clientSocket );
-
+        printf("bytes: %d\n", page_number_of_bytes);
 
         index += page_number_of_bytes;
         //fprintf (html_page, "%s", string_from_page);
@@ -280,6 +279,7 @@ void getHTML( char * info_file, int len, int connection_socket, int clientSocket
     free(path_to_html_file);
     free(html_file);
     free(string_from_page);
+
 }
 
 // Essa função é para ser usada quando a página não tiver a informção "content-length"
@@ -350,7 +350,7 @@ int http( char * url, int * clientSocket ){
 
     struct addrinfo * result = getWebsiteSocket( serverIP );
     free(serverIP);
-    int * connection_socket = conncetionWebsiteSocket( url, result );
+    int connection_socket = conncetionWebsiteSocket( url, result );
     free(result);
 
     char * info_file = getHTMLinformation( url, connection_socket );
@@ -358,17 +358,17 @@ int http( char * url, int * clientSocket ){
 
     // envio para o cliente o número de bytes da página solicitada
     sendInt(len, *clientSocket);
-/*
+
     if(len == CONTENT_LENGTH_NOT_FOUND){
         printf("\t=== No page content-length found! ===\n");
-        len = getHTML_With_No_Length_Found( info_file, *connection_socket );
+        len = getHTML_With_No_Length_Found( info_file, connection_socket );
     }else{
         printf("\t=== Page content-length found: %d ===\n", len);
-      	getHTML( info_file, len, *connection_socket, *clientSocket );
+      	getHTML( info_file, len, connection_socket, *clientSocket );
     }
-*/
+
     free(info_file);
-    close(*connection_socket);
+    close(connection_socket);
 
     printf("\t=== HTML page collected! ===\n");
 

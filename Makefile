@@ -22,5 +22,5 @@ obj/server.o: src/server.c src/hashServer.c src/communication.c $(HTTP_SCRIPT) s
 	mv *.o obj/
 
 clean:
-	clear
 	rm clients/client1/* clients/client2/* clients/client3/* proxy/* infoPage/* obj/* bin/*
+	clear

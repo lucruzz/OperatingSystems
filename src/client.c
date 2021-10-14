@@ -126,6 +126,26 @@ void * search_function_multithread( void * ptr ){
     pt->clientSocket = sendSocket;
     int connectResult = connect(pt->clientSocket, (struct sockaddr *)&(pt->t), sizeof(struct sockaddr_in));
 
+    // Envio o sinal do commando para a nova thread
+    sendInt(SEARCH_ID, pt->clientSocket);
+
+    // Envio o sinal do commando para a nova thread
+    sendInt(1, pt->clientSocket);
+
+    // Envio o site a ser procurado
+    sendString(pt->site, pt->clientSocket);
+
+    int content_length = recvInt(pt->clientSocket);
+    printf("[+] Content-Length: %d\n", content_length);
+
+    char * filename = recvString(pt->clientSocket);
+    printf("[+] Filename: %s\n", filename);
+
+    // Envio um sinal para fechar o socket
+    sendInt(EXIT_ID, pt->clientSocket);
+    // printf("%s\n", s);
+    // sendString("exit", pt->clientSocket);
+/*
     // Sinalizo a inicialização da thread
     char * s = recvString(pt->clientSocket);
     printf("%s\n", s);
@@ -138,11 +158,12 @@ void * search_function_multithread( void * ptr ){
 
     if(found == NODE_NOT_FOUND){
         printf("[+] Proxy is searching on the internet!\n");
-        int content_length = recvInt(pt->clientSocket);
-        printf("[+] content-Length: %d\n", content_length);
+        // int content_length = recvInt(pt->clientSocket);
+        // printf("[+] content-Length: %d\n", content_length);
     }else{
         printf("[+] Page on proxy!\n");
     }
+  */
 /*
     // Recebo a quantidade de bytes da página a ser recebida
     int n_bytes_to_recv = recvInt(pt->clientSocket);
@@ -227,12 +248,23 @@ void search(char *command, ClientInformation * ptr){
     // Envia o número de argumentos (sites)
     sendInt(n, mysocket);
 
-    if(n != 0){
+    // Se o número de sites que o cliente pediu para processar for 1
+    // Eu não quero/preciso abrir uma thread eu posso executar na própria thread
+    if( n == 1 ){
+        // Envio o site a ser procurado
+        sendString((commandList->begin)->argument, ptr->clientSocket);
+
+        int content_length = recvInt(ptr->clientSocket);
+        printf("[+] Content-Length: %d\n", content_length);
+
+        char * filename = recvString(ptr->clientSocket);
+        printf("[+] Filename: %s\n", filename);
+    }else if(n > 1){
         // Cria uma estrutura para armazenar os threads_ids de acordo com o número de sites
         pthread_t search_t[ n ];
 
         // Envia o diretório compartilhado a que deseja receber os dados
-        sendString(directory, mysocket);
+        // sendString(directory, mysocket);
 
         // Armazeno em um ponteiro auxiliar o início da lista de argumentos
         //Node * aux = commandList->begin;
@@ -250,7 +282,7 @@ void search(char *command, ClientInformation * ptr){
             searchArgs_t[ i ].t = *(ptr->serv_dest);
             searchArgs_t[ i ].tid = i;
 
-            int error_t = pthread_create( &search_t[ i ], NULL, search_function_multithread, &searchArgs_t[ i ] );
+            int error_t = pthread_create( &search_t[ i ], NULL, &search_function_multithread, &searchArgs_t[ i ] );
 
             if(error_t){
                 printf("\t=== Sorry! The thread could not be created! ===\n");
@@ -367,14 +399,14 @@ int main( int argc, char *argv[] ){
 
     int port = atoi( argv[ 2 ] );
     struct sockaddr_in serv_dest;
-/////////////////////////////////// Esta parte é a função /////////////////////////////////////////
+/////////////////////////////////// Esta parte está na função /////////////////////////////////////////
 
     memset(&serv_dest, 0, sizeof(serv_dest));               // zero the struct
     serv_dest.sin_family = AF_INET;
     serv_dest.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // set destination IP number - localhost, 127.0.0.1
     serv_dest.sin_port = htons( port );   // set destination port number
 
-/////////////////////////////////// Esta parte é a função /////////////////////////////////////////
+/////////////////////////////////// Esta parte está na função /////////////////////////////////////////
 
     int mysocket = clientConnection2(serv_dest);
     //int mysocket = clientConnection(port, serv_dest);
