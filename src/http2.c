@@ -258,16 +258,16 @@ void getHTML( char * info_file, int len, int connection_socket, int clientSocket
         //send( clientSocket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
         //printf("%s\n", string_from_page);
         //printf("---> strlen(): %d | bytes reads: %d<---\n", (int)strlen(string_from_page), page_number_of_bytes);
-        // send( clientSocket, "oi", 2*sizeof(char), 0);
+        send( clientSocket, string_from_page, page_number_of_bytes*sizeof(char), 0);
         // sendString2( string_from_page, page_number_of_bytes, clientSocket );
-        printf("bytes: %d\n", page_number_of_bytes);
+        // printf("bytes: %d\n", page_number_of_bytes);
 
         index += page_number_of_bytes;
         //fprintf (html_page, "%s", string_from_page);
         fputs(string_from_page, html_page);
 
         if( index % len == 0){
-            printf("bytes reads> %d\n", index);
+            //printf("bytes reads> %d\n", index);
             break;
         }
         // memset(&string_from_page, 0, sizeof(char));

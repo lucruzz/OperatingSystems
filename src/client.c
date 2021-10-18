@@ -141,6 +141,47 @@ void * search_function_multithread( void * ptr ){
     char * filename = recvString(pt->clientSocket);
     printf("[+] Filename: %s\n", filename);
 
+    int total_full_length_to_file = strlen(pt->directory) + strlen(filename);
+    // Aloco uma string com o tamanho total do caminho para o arquivo
+    char * full_path_file = ( char * ) calloc(total_full_length_to_file + 2, sizeof(char));
+    strcat(full_path_file, pt->directory);
+    strcat(full_path_file, "/");
+    strcat(full_path_file, filename);
+    printf("[+] Path to file: %s\n", full_path_file);
+
+    // Abro o arquivo para armazenar a página "no lado" cliente
+    FILE * p = fopen(full_path_file, "w");
+
+    free(filename);
+    free(full_path_file);
+
+    // Aloco memória para receber os bytes da proxy
+    char * page_recv = (char *) calloc(N_BYTES_TO_RECV, sizeof(char));
+
+    int bytes_recv = 0;
+
+    while(1){
+
+        // int bytes = recvString2(page_recv, mysocket);
+        int bytes = recv( pt->clientSocket, page_recv, N_BYTES_TO_RECV*sizeof(char), 0);
+        // int bytes = recvString2(page_recv, pt->clientSocket);
+
+        fputs(page_recv, p);
+
+        bytes_recv += bytes;
+
+        if( bytes_recv % content_length == 0){
+            printf("bytes reads> %d\n", bytes_recv);
+            break;
+        }
+
+        memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
+    }
+
+    free(page_recv);
+    fclose(p);
+    printf("\t=== Page received from proxy! ===\n");
+
     // Envio um sinal para fechar o socket
     sendInt(EXIT_ID, pt->clientSocket);
     // printf("%s\n", s);
@@ -259,6 +300,49 @@ void search(char *command, ClientInformation * ptr){
 
         char * filename = recvString(ptr->clientSocket);
         printf("[+] Filename: %s\n", filename);
+
+        int total_full_length_to_file = strlen(ptr->directory) + strlen(filename);
+
+        // Aloco uma string com o tamanho total do caminho para o arquivo
+        char * full_path_file = ( char * ) calloc(total_full_length_to_file + 2, sizeof(char));
+        strcat(full_path_file, ptr->directory);
+        strcat(full_path_file, "/");
+        strcat(full_path_file, filename);
+        printf("[+] Path to file: %s\n", full_path_file);
+
+        // Abro o arquivo para armazenar a página "no lado" cliente
+        FILE * p = fopen(full_path_file, "w");
+
+        free(filename);
+        free(full_path_file);
+
+        // Aloco memória para receber os bytes da proxy
+        char * page_recv = (char *) calloc(N_BYTES_TO_RECV, sizeof(char));
+
+        int bytes_recv = 0;
+
+        while(1){
+
+            // int bytes = recvString2(page_recv, mysocket);
+            int bytes = recv( ptr->clientSocket, page_recv, N_BYTES_TO_RECV*sizeof(char), 0);
+            // int bytes = recvString2(page_recv, pt->clientSocket);
+
+            fputs(page_recv, p);
+
+            bytes_recv += bytes;
+
+            if( bytes_recv % content_length == 0){
+                printf("bytes reads> %d\n", bytes_recv);
+                break;
+            }
+
+            memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
+        }
+
+        free(page_recv);
+        fclose(p);
+        printf("\t=== Page received from proxy! ===\n");
+
     }else if(n > 1){
         // Cria uma estrutura para armazenar os threads_ids de acordo com o número de sites
         pthread_t search_t[ n ];
@@ -277,6 +361,7 @@ void search(char *command, ClientInformation * ptr){
 
             // int sendSocket = socket(AF_INET, SOCK_STREAM, 0);
             // searchArgs_t[ i ].clientSocket = sendSocket;
+            searchArgs_t[ i ].directory = ptr->directory;
             searchArgs_t[ i ].site = list_ptr[ i ]->argument;
             searchArgs_t[ i ].serv_dest = (ptr->serv_dest);
             searchArgs_t[ i ].t = *(ptr->serv_dest);
@@ -322,11 +407,15 @@ void list( int mysocket ){
         int n = recvInt(mysocket);
 
         if( n != 0 ){
+            printf("[+] Sites availables on proxy:\n");
             char * site;
+            char * time;
             for (int i = 1; i <= n; i++ ){
               site = recvString(mysocket);
-              printf("[%d] (%d) %s\n", j, i, site);
+              time = recvString(mysocket);
+              printf("\tHashtable[%d](%d) %s | Creation time: %s\n", j, i, site, time);
               free(site);
+              free(time);
             }
         }
         j++;

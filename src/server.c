@@ -45,7 +45,9 @@ typedef struct SearchArguments_t{
     int tid;
 }SearchArguments_t;
 
-Hash hashArray[TABLE_SIZE];
+// Hash hashArray[TABLE_SIZE];
+// Hash ** hashArray2[TABLE_SIZE];
+Hash * hashArray[ TABLE_SIZE ];
 bool runServer;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -117,21 +119,21 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
 */
 
 // Wrapper for seaching
-LinkedList * searchInHashSynchronized( char * str, Hash hashArray [] ){
+LinkedList * searchInHashSynchronized( char * str ){
     pthread_mutex_lock(&lock);
     LinkedList * node = searchInHash(str, hashArray);
     pthread_mutex_unlock(&lock);
     return node;
 }
 // Wrapper for creating node on hash
-LinkedList * createNodeSynchronized( char * str, int content_length, Hash hashArray [] ){
+LinkedList * createNodeSynchronized( char * str, int content_length ){
     pthread_mutex_lock(&lock);
     LinkedList * node = createNode(str, content_length, hashArray);
     pthread_mutex_unlock(&lock);
     return node;
 }
 // Wrapper for removing
-LinkedList * removeNodeSynchronized( LinkedList * aux, LinkedList * node, int index, Hash hashArray [] ){
+LinkedList * removeNodeSynchronized( LinkedList * aux, LinkedList * node, int index ){
     pthread_mutex_lock(&lock);
     node = remove_Hash_Node(aux, node, index, hashArray);
     pthread_mutex_unlock(&lock);
@@ -212,29 +214,34 @@ void * handleClientConnection( void * ptr ){
 
           case LIST_ID:
               printf("[LIST COMMAND]\n");
-              //printHash(hashArray);
+              // printHash(hashArray);
 
               int i = 0;
 
               while( i < TABLE_SIZE ){
 
-                  if(hashArray[i].begin == NULL){
+                  pthread_mutex_lock(&lock);
+
+                  if(hashArray[i] == NULL){
 
                       sendInt(0, consocket);
 
                   }else{
 
-                      LinkedList * node = hashArray[i].begin;
-                      int n = hashArray[i].n_elements;
+                      LinkedList * node = hashArray[i]->begin;
+                      int n = hashArray[i]->n_elements;
 
                       sendInt(n, consocket);
 
                       for ( int j = 1; j <= n; j++ ){
                           sendString(node->site, consocket);
+                          sendString(ctime(&node->creation_time), consocket);
+
                           node = node->next;
                       }
 
                   }
+                  pthread_mutex_unlock(&lock);
                   i++;
 
               }
@@ -252,7 +259,7 @@ void * handleClientConnection( void * ptr ){
                   char * site = recvString(consocket);
                   printf("[+] Searching for site: %s\n", site);
 
-                  LinkedList * node = searchInHashSynchronized(site, hashArray);
+                  LinkedList * node = searchInHashSynchronized(site);
 
                   if ( node == NULL ){
 
@@ -260,7 +267,7 @@ void * handleClientConnection( void * ptr ){
                     int content_length = http(site, &consocket);
 
                     // Inclui na hashtable
-                    node = createNodeSynchronized(site, content_length, hashArray);
+                    node = createNodeSynchronized(site, content_length);
 
                     printf("[+] HTML file available on proxy!\n");
                     printf("[+] %s", ctime(&node->creation_time));
@@ -272,7 +279,7 @@ void * handleClientConnection( void * ptr ){
 
 
 
-                  free(site);
+                  // free(site);
                   // Dentro da thread, vai receber
               }
 
@@ -296,80 +303,6 @@ void * handleClientConnection( void * ptr ){
               break;
 
         }
-    }
-
-    return (void*) 0;
-
-}
-
-void * handleClientConnection2( void * ptr ){
-
-    bool runClient = true;
-    ClientArguments_t * pt = (ClientArguments_t *) ptr;
-
-    int consocket = pt->clientSocket;
-
-    //Recebe o ID do comando a ser processado
-    int commandReceived_id = 0;
-    commandReceived_id = recvInt(consocket);
-
-    switch (commandReceived_id) {
-
-      case LIST_ID:
-          printf("[LIST COMMAND]\n");
-          //printHash(hashArray);
-
-          int i = 0;
-
-          while( i < TABLE_SIZE ){
-
-              if(hashArray[i].begin == NULL){
-
-                  sendInt(0, consocket);
-
-              }else{
-
-                  LinkedList * node = hashArray[i].begin;
-                  int n = hashArray[i].n_elements;
-
-                  sendInt(n, consocket);
-
-                  for ( int j = 1; j <= n; j++ ){
-                      sendString(node->site, consocket);
-                      node = node->next;
-                  }
-
-              }
-              i++;
-
-          }
-
-          break;
-
-      case SEARCH_ID:
-          printf("[SEARCH COMMAND]\n");
-
-          char * s = recvString(consocket);
-          printf("%s\n", s);
-
-          break;
-
-      case HISTORY_ID:
-          printf("[HISTORY COMMAND]\n");
-          break;
-
-      case COMMAND_ID_NOT_FOUND:
-          printf("[COMMAND NOT FOUND]\n");
-          break;
-
-      case EXIT_ID:
-          printf("[EXIT COMMAND]\n");
-          printf("\t=== Client %d disconnected! ===\n", consocket);
-          printf("\t=== Server says bye bye to client %d! ===\n", consocket);
-          close(consocket);
-          runClient = false;
-          break;
-
     }
 
     return (void*) 0;
@@ -411,13 +344,13 @@ int acceptConnectionSocket( int serverSocket, struct sockaddr_in dest ){
 
 void verifyHashtable( int signum ){
 
-  int i = 0;
+    int i = 0;
 
     while( i < TABLE_SIZE ){
 
-        if( hashArray[i].begin != NULL ){
+        if( hashArray[i] != NULL ){
 
-            LinkedList * node = hashArray[i].begin;
+            LinkedList * node = hashArray[i]->begin;
             LinkedList * aux = node;
 
             while( node != NULL ){
@@ -434,7 +367,7 @@ void verifyHashtable( int signum ){
                     strcpy(info_file, pt);
                     strcat(info_file, ".txt");
 
-                    node = removeNodeSynchronized(aux, node, i, hashArray);
+                    node = removeNodeSynchronized(aux, node, i);
                     // node = remove_Hash_Node(aux, node, i, hashArray);
                     char * timeString = ctime( &now );
 
@@ -456,6 +389,7 @@ void verifyHashtable( int signum ){
             }
 
         }
+
       i++;
 
     }
