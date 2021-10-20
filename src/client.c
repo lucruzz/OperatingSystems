@@ -156,7 +156,7 @@ void * search_function_multithread( void * ptr ){
     free(full_path_file);
 
     // Aloco memória para receber os bytes da proxy
-    char * page_recv = (char *) calloc(N_BYTES_TO_RECV, sizeof(char));
+    char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
 
     int bytes_recv = 0;
 
@@ -171,7 +171,7 @@ void * search_function_multithread( void * ptr ){
         bytes_recv += bytes;
 
         if( bytes_recv % content_length == 0){
-            printf("bytes reads> %d\n", bytes_recv);
+            // printf("bytes reads> %d\n", bytes_recv);
             break;
         }
 
@@ -317,7 +317,7 @@ void search(char *command, ClientInformation * ptr){
         free(full_path_file);
 
         // Aloco memória para receber os bytes da proxy
-        char * page_recv = (char *) calloc(N_BYTES_TO_RECV, sizeof(char));
+        char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
 
         int bytes_recv = 0;
 
@@ -402,12 +402,12 @@ void list( int mysocket ){
     puts("> List");
 
     int j = 0;
+    printf("[+] Sites availables on proxy:\n");
     while ( j < TABLE_SIZE ){
 
         int n = recvInt(mysocket);
 
         if( n != 0 ){
-            printf("[+] Sites availables on proxy:\n");
             char * site;
             char * time;
             for (int i = 1; i <= n; i++ ){

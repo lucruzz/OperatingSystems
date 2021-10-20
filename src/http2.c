@@ -245,7 +245,7 @@ void getHTML( char * info_file, int len, int connection_socket, int clientSocket
 
     // char string_from_page[N_BYTES_TO_RECV];
     // char * string_from_page = (char*) calloc ( N_BYTES_TO_RECV + 1, sizeof( char ) );
-    char * string_from_page = (char*) calloc ( N_BYTES_TO_RECV, sizeof( char ) );
+    char * string_from_page = (char*) calloc ( N_BYTES_TO_RECV + 1, sizeof( char ) );
     int index = 0;
     // memset(&string_from_page, 0, sizeof(char));
     //memset(string_from_page, 0, N_BYTES_TO_RECV*sizeof(char) + 1);

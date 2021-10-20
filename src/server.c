@@ -51,8 +51,8 @@ Hash * hashArray[ TABLE_SIZE ];
 bool runServer;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
-/*
-void sendPageToClient( LinkedList * node, char  * send_to_directory, int consocket ){
+
+void sendPageToClient( LinkedList * node, int consocket ){
 
     int content_length = node->content_length;
     char * str = node->site;
@@ -68,19 +68,19 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
     char * file_to_send = (char *) calloc ((int)strlen(pt) + 1, sizeof(char) );
     strcpy(file_to_send, pt);
 
-    printf("\t=== Sending %s file to client ===\n", file_to_send);
+    printf("[+] Sending %s file to client\n", file_to_send);
 
     // Envio o nome da página
     sendString(file_to_send, consocket);
 
-    // Configura string para criar arquivo dentro do diretório correto
+    // Configura string para abrir arquivo dentro do diretório correto
     char * path_to_html_file_on_proxy = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
     strcpy( path_to_html_file_on_proxy, PROXY_DIRECTORY );
     strcat( path_to_html_file_on_proxy, "/" );
     strcat( path_to_html_file_on_proxy, file_to_send );
 
 
-    char * string_line_from_file = (char *) calloc( N_BYTES_TO_SEND + 1, sizeof(char));
+    char * string_line_from_file = (char *) calloc( N_BYTES_TO_SEND, sizeof(char));
 
     FILE * p = fopen(path_to_html_file_on_proxy, "r");
 
@@ -88,26 +88,36 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
     int pos = 0; // indice para armazenar o caracter
 
     while( 1 ){
-
+/*
         char c = fgetc( p );
 
         if( c == EOF ){
             sendString2(string_line_from_file, consocket);
             break;
         }
+*/
+        fgets(string_line_from_file, N_BYTES_TO_SEND, p );
+        //printf("%s\n", string_line_from_file);
+        //printf("bytes reads: %ld\n", strlen(string_line_from_file));
+        number_of_bytes_reads += strlen(string_line_from_file);
 
-        if( strlen(string_line_from_file) == N_BYTES_TO_SEND){
+        if(content_length % number_of_bytes_reads == 0){
+            break;
+        }
+        send( consocket, string_line_from_file, (strlen(string_line_from_file))*sizeof(char), 0);
+        memset(string_line_from_file, 0, N_BYTES_TO_SEND);
+        /*if( strlen(string_line_from_file) == N_BYTES_TO_SEND){
             sendString2(string_line_from_file, consocket);
             memset(string_line_from_file, 0, N_BYTES_TO_SEND);
             pos = 0;
-        }
-        *(string_line_from_file + pos) = c;
-        number_of_bytes_reads++;
-        pos++;
+        }*/
+        //*(string_line_from_file + pos) = c;
+        //number_of_bytes_reads++;
+        //pos++;
     }
 
-    printf("\t=== File %s sended to %s ===\n",  path_to_html_file_on_proxy, send_to_directory);
-    printf("\t=== %d bytes reads ===\n", number_of_bytes_reads);
+    printf("[+] File %s sended\n",  path_to_html_file_on_proxy);
+    printf("[+] %d bytes reads\n", number_of_bytes_reads);
 
     fclose(p);
 
@@ -116,7 +126,7 @@ void sendPageToClient( LinkedList * node, char  * send_to_directory, int consock
     free(string_line_from_file);
 
 }
-*/
+
 
 // Wrapper for seaching
 LinkedList * searchInHashSynchronized( char * str ){
@@ -243,7 +253,6 @@ void * handleClientConnection( void * ptr ){
                   }
                   pthread_mutex_unlock(&lock);
                   i++;
-
               }
 
               break;
@@ -272,15 +281,63 @@ void * handleClientConnection( void * ptr ){
                     printf("[+] HTML file available on proxy!\n");
                     printf("[+] %s", ctime(&node->creation_time));
 
+                  }else{
+                    printf("[+] Page already on proxy! Sending to client...\n");
                     // entrega o site para o  cliente
-                    // sendPageToClient(node, send_to_directory, consocket);
+                    // sendPageToClient(node, consocket);
 
+                    int content_length = node->content_length;
+                    char * str = node->site;
+
+                    // Envia o número de bytes da página
+                    sendInt(content_length, consocket);
+
+                    char * pt = memrchr(str, '/', (int)strlen(str)) + 1;
+                    char * file_to_send = (char *) calloc ((int)strlen(pt) + 1, sizeof(char) );
+                    strcpy(file_to_send, pt);
+
+                    printf("[+] Sending %s file to client\n", file_to_send);
+
+                    // Envio o nome da página
+                    sendString(file_to_send, consocket);
+
+                    // Configura string para abrir arquivo dentro do diretório correto
+                    char * path_to_html_file_on_proxy = ( char * ) calloc( LENGTH_DIR_PATH, sizeof(char) );
+                    strcpy( path_to_html_file_on_proxy, PROXY_DIRECTORY );
+                    strcat( path_to_html_file_on_proxy, "/" );
+                    strcat( path_to_html_file_on_proxy, file_to_send );
+
+                    char * string_line_from_file = (char *) calloc( N_BYTES_TO_SEND, sizeof(char));
+
+                    FILE * p = fopen(path_to_html_file_on_proxy, "r");
+
+                    int number_of_bytes_reads = 0; // contador para content_length
+                    int pos = 0; // indice para armazenar o caracter
+
+                    while( 1 ){
+
+                        fgets(string_line_from_file, N_BYTES_TO_SEND, p );
+
+                        number_of_bytes_reads += strlen(string_line_from_file);
+
+                        if(content_length % number_of_bytes_reads == 0){
+                            send( consocket, string_line_from_file, (strlen(string_line_from_file))*sizeof(char), 0);
+                            break;
+                        }
+                        send( consocket, string_line_from_file, (strlen(string_line_from_file))*sizeof(char), 0);
+                        memset(string_line_from_file, 0, N_BYTES_TO_SEND*sizeof(char));
+                    }
+
+                    printf("[+] File %s sended\n",  path_to_html_file_on_proxy);
+                    printf("[+] %d bytes reads\n", number_of_bytes_reads);
+
+                    fclose(p);
+
+                    free(file_to_send);
+                    free(path_to_html_file_on_proxy);
+                    free(string_line_from_file);
                   }
 
-
-
-                  // free(site);
-                  // Dentro da thread, vai receber
               }
 
               break;
