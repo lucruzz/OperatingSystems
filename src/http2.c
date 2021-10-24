@@ -110,8 +110,6 @@ int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
     strcat(request, url);
     strcat(request, " HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n");
 
-    //char * request  = "GET http://web.ist.utl.pt/luis.tarrataca/hello.html HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n";
-
     int number_of_bytes = strlen( request );//* sizeof( char );
 
     puts("\tSending request...");
@@ -239,39 +237,26 @@ void getHTML( char * info_file, int len, int connection_socket, int clientSocket
 
     FILE * html_page = fopen (path_to_html_file, "w");
 
-    //printf("\tLENGTH HTML PAGE: %d\n", len);
-
-    //int plus_size = len - (len % N_BYTES_TO_RECV);//acrescento o restante para alocação. Para que não dê erro de alocação no strcat.
-
-    // char string_from_page[N_BYTES_TO_RECV];
-    // char * string_from_page = (char*) calloc ( N_BYTES_TO_RECV + 1, sizeof( char ) );
     char * string_from_page = (char*) calloc ( N_BYTES_TO_RECV + 1, sizeof( char ) );
     int index = 0;
-    // memset(&string_from_page, 0, sizeof(char));
-    //memset(string_from_page, 0, N_BYTES_TO_RECV*sizeof(char) + 1);
 
-    // int k = 0;
     while( 1 ){
-        // int page_number_of_bytes = recv( connection_socket, &string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
-        int page_number_of_bytes = recv( connection_socket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
-        // int page_number_of_bytes = recvString2(string_from_page, connection_socket);
-        //send( clientSocket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
-        //printf("%s\n", string_from_page);
-        //printf("---> strlen(): %d | bytes reads: %d<---\n", (int)strlen(string_from_page), page_number_of_bytes);
-        send( clientSocket, string_from_page, page_number_of_bytes*sizeof(char), 0);
-        // sendString2( string_from_page, page_number_of_bytes, clientSocket );
-        // printf("bytes: %d\n", page_number_of_bytes);
+
+        // int page_number_of_bytes = recv( connection_socket, string_from_page, N_BYTES_TO_RECV*sizeof(char), 0);
+        int page_number_of_bytes = recvString2(string_from_page, connection_socket);
+
+        // send( clientSocket, string_from_page, page_number_of_bytes*sizeof(char), 0);
+        sendString2( string_from_page, page_number_of_bytes, clientSocket );
+
 
         index += page_number_of_bytes;
         //fprintf (html_page, "%s", string_from_page);
         fputs(string_from_page, html_page);
 
         if( index % len == 0){
-            //printf("bytes reads> %d\n", index);
             break;
         }
-        // memset(&string_from_page, 0, sizeof(char));
-        // memset(string_from_page, 0, N_BYTES_TO_RECV*sizeof(char) + 1);
+
         memset(string_from_page, 0, N_BYTES_TO_RECV*sizeof(char) );
     }
 
@@ -375,41 +360,3 @@ int http( char * url, int * clientSocket ){
     return len;
 
 }
-
-
-/* int http( char * url )
-{
-
-    if( !checkURL( url ) ){ // Se a url não estiver de acordo com os parâmetros do programa
-        return ERROR_URL_NOT_HTTP; // retorna que deu ruim
-    }
-
-    char * serverIP = getWebsiteServer( url );
-
-    struct addrinfo * result = getWebsiteSocket( serverIP );
-    free(serverIP);
-
-    int connection_socket = conncetionWebsiteSocket( url, result );
-    free(result);
-
-    char * info_file = getHTMLinformation( url, connection_socket );
-    int len = getHTMLlength( info_file );
-
-    if(len == CONTENT_LENGTH_NOT_FOUND){
-        printf("\tNo page content-length found!\n");
-        len = getHTML_With_No_Length_Found( info_file, connection_socket );
-    }else{
-        printf("\tPage content-length found: %d\n", len);
-      	getHTML( info_file, len, connection_socket );
-    }
-
-    free(info_file);
-    close(connection_socket);
-
-    printf("\tHTML page collected!\n");
-
-    return len;
-
-}
-
-*/

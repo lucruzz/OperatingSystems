@@ -79,8 +79,6 @@ int clientConnection( int port, struct sockaddr_in serv_dest ){
 
     int connectResult = connect(mysocket, (struct sockaddr *)&serv_dest, sizeof(struct sockaddr_in));
 
-    //printf("Incoming connections from %s\n", inet_ntoa(serv_dest.sin_addr));
-
     if( connectResult == COMMUNICATION_ERROR ){
         printf("CLIENT ERROR: %s\n", strerror(errno));
         return COMMUNICATION_ERROR;
@@ -171,7 +169,6 @@ void * search_function_multithread( void * ptr ){
         bytes_recv += bytes;
 
         if( bytes_recv % content_length == 0){
-            // printf("bytes reads> %d\n", bytes_recv);
             break;
         }
 
@@ -184,88 +181,7 @@ void * search_function_multithread( void * ptr ){
 
     // Envio um sinal para fechar o socket
     sendInt(EXIT_ID, pt->clientSocket);
-    // printf("%s\n", s);
-    // sendString("exit", pt->clientSocket);
-/*
-    // Sinalizo a inicialização da thread
-    char * s = recvString(pt->clientSocket);
-    printf("%s\n", s);
-    free(s);
 
-    // Envio o site a ser buscado
-    sendString(pt->site, pt->clientSocket);
-
-    int found = recvInt(pt->clientSocket);
-
-    if(found == NODE_NOT_FOUND){
-        printf("[+] Proxy is searching on the internet!\n");
-        // int content_length = recvInt(pt->clientSocket);
-        // printf("[+] content-Length: %d\n", content_length);
-    }else{
-        printf("[+] Page on proxy!\n");
-    }
-  */
-/*
-    // Recebo a quantidade de bytes da página a ser recebida
-    int n_bytes_to_recv = recvInt(pt->clientSocket);
-    printf("\t=== Content-Length: %d ===\n", n_bytes_to_recv);
-
-    // Recebo o nome da paǵina (http.c)
-    char * page_filename = recvString(pt->clientSocket);
-
-    // Eu acho que eu não preciso saber o diretório... Porque eu vou receber com o socket
-    // Envio o nome do diretório (http.c)
-    // sendString(pt->directory, pt->clientSocket);
-
-    int length_str_page_filename = strlen(page_filename);
-    int length_str_directory = strlen(pt->directory);
-
-    int total_full_length_to_file = length_str_directory + length_str_page_filename;
-
-    // Aloco uma string com o tamanho total do caminho para o arquivo
-    char * full_path_file = ( char * ) calloc(total_full_length_to_file + 2, sizeof(char));
-    strcat(full_path_file, pt->directory);
-    strcat(full_path_file, "/");
-    strcat(full_path_file, page_filename);
-
-    // Abro o arquivo para armazenar a página "no lado" cliente
-    FILE * p = fopen(full_path_file, "w");
-
-    free(page_filename);
-    free(full_path_file);
-
-    // char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
-    char * page_recv = (char *) calloc(N_BYTES_TO_RECV, sizeof(char));
-
-    int bytes_recv = 0;
-
-    while(1){
-
-        // int bytes = recvString2(page_recv, mysocket);
-        // int bytes = recv( pt->clientSocket, page_recv, N_BYTES_TO_RECV*sizeof(char), 0);
-        int bytes = recvString2(page_recv, pt->clientSocket);
-        // printf("strlen(): %d | bytes reads: %d\n", (int)strlen(page_recv), bytes);
-
-        fputs(page_recv, p);
-
-        bytes_recv += bytes;
-        //printf("bytes reads> %d\n", bytes_recv);
-
-        // if(bytes % N_BYTES_TO_RECV != 0)
-        //    break;
-
-        if( bytes_recv % n_bytes_to_recv == 0){
-            printf("bytes reads> %d\n", bytes_recv);
-            break;
-        }
-
-        memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
-    }
-
-    free(page_recv);
-    fclose(p);
-    printf("\t=== Page received from proxy! ===\n");
-*/
     close(pt->clientSocket);
 
     return (void *) 0;
@@ -323,9 +239,8 @@ void search(char *command, ClientInformation * ptr){
 
         while(1){
 
-            // int bytes = recvString2(page_recv, mysocket);
-            int bytes = recv( ptr->clientSocket, page_recv, N_BYTES_TO_RECV*sizeof(char), 0);
-            // int bytes = recvString2(page_recv, pt->clientSocket);
+            // int bytes = recv( ptr->clientSocket, page_recv, N_BYTES_TO_RECV*sizeof(char), 0);
+            int bytes = recvString2(page_recv, ptr->clientSocket);
 
             fputs(page_recv, p);
 
@@ -488,25 +403,19 @@ int main( int argc, char *argv[] ){
 
     int port = atoi( argv[ 2 ] );
     struct sockaddr_in serv_dest;
-/////////////////////////////////// Esta parte está na função /////////////////////////////////////////
 
     memset(&serv_dest, 0, sizeof(serv_dest));               // zero the struct
     serv_dest.sin_family = AF_INET;
     serv_dest.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // set destination IP number - localhost, 127.0.0.1
     serv_dest.sin_port = htons( port );   // set destination port number
 
-/////////////////////////////////// Esta parte está na função /////////////////////////////////////////
-
     int mysocket = clientConnection2(serv_dest);
-    //int mysocket = clientConnection(port, serv_dest);
 
     if(mysocket == COMMUNICATION_ERROR){
-        // free(history);
         return COMMUNICATION_ERROR;
     }
 
-    char * directory = argv[ 1 ];//( char * ) calloc ( MAX_LINE_PATH_SHARED_FOLDER, sizeof(char) );
-    //strcpy( directory, argv[ 1 ] ;
+    char * directory = argv[ 1 ];
     char * command;
     int run = TRUE;
     ShellCommands * history = createHistory();
@@ -536,7 +445,7 @@ int main( int argc, char *argv[] ){
 
     pthread_mutex_destroy(&lock);
     close(mysocket);
-    //free(directory);
+    // free(directory);
     free(pt);
     return EXIT_SUCCESS;
 }

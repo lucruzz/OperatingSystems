@@ -35,18 +35,6 @@ typedef struct ClientArguments_t{
     int port;
 }ClientArguments_t;
 
-typedef struct SearchArguments_t{
-    struct sockaddr_in * dest;
-    char * directory;
-    char * site;
-    int clientSocket;
-    int serverSocket;
-    int port;
-    int tid;
-}SearchArguments_t;
-
-// Hash hashArray[TABLE_SIZE];
-// Hash ** hashArray2[TABLE_SIZE];
 Hash * hashArray[ TABLE_SIZE ];
 bool runServer;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -88,32 +76,17 @@ void sendPageToClient( LinkedList * node, int consocket ){
     int pos = 0; // indice para armazenar o caracter
 
     while( 1 ){
-/*
-        char c = fgetc( p );
 
-        if( c == EOF ){
-            sendString2(string_line_from_file, consocket);
-            break;
-        }
-*/
         fgets(string_line_from_file, N_BYTES_TO_SEND, p );
-        //printf("%s\n", string_line_from_file);
-        //printf("bytes reads: %ld\n", strlen(string_line_from_file));
         number_of_bytes_reads += strlen(string_line_from_file);
 
         if(content_length % number_of_bytes_reads == 0){
             break;
         }
-        send( consocket, string_line_from_file, (strlen(string_line_from_file))*sizeof(char), 0);
+        // send( consocket, string_line_from_file, (strlen(string_line_from_file))*sizeof(char), 0);
+        sendString( string_line_from_file, consocket );
         memset(string_line_from_file, 0, N_BYTES_TO_SEND);
-        /*if( strlen(string_line_from_file) == N_BYTES_TO_SEND){
-            sendString2(string_line_from_file, consocket);
-            memset(string_line_from_file, 0, N_BYTES_TO_SEND);
-            pos = 0;
-        }*/
-        //*(string_line_from_file + pos) = c;
-        //number_of_bytes_reads++;
-        //pos++;
+
     }
 
     printf("[+] File %s sended\n",  path_to_html_file_on_proxy);
@@ -126,7 +99,6 @@ void sendPageToClient( LinkedList * node, int consocket ){
     free(string_line_from_file);
 
 }
-
 
 // Wrapper for seaching
 LinkedList * searchInHashSynchronized( char * str ){
@@ -149,63 +121,7 @@ LinkedList * removeNodeSynchronized( LinkedList * aux, LinkedList * node, int in
     pthread_mutex_unlock(&lock);
     return node;
 }
-/*
-void * handleSearch( void * ptr ){
 
-    SearchArguments_t * pt = ( SearchArguments_t * ) ptr;
-    // puts("Fuck");
-    // socklen_t socksize = sizeof(struct sockaddr_in);
-    // struct sockaddr_in target = *(pt->dest);
-    //
-    // int sock = accept(pt->serverSocket, (struct sockaddr *)&target, &socksize);
-    // pt->clientSocket = sock;
-
-    // Sinalizo a inicialização da thread
-    sendString("Searching for site...", pt->clientSocket);
-    // Recebo o site a ser procurado
-    char * site = recvString(pt->clientSocket);
-    pt->site = site;
-
-    // Procura o site na proxy (hahstable)
-    LinkedList * node = searchInHashSynchronized(pt->site, hashArray);
-
-    if ( node == NULL ){ // Se o site não estiver na proxy (hashtable)
-
-        sendInt(NODE_NOT_FOUND, pt->clientSocket);
-
-        // int socket = pt->clientSocket;
-        // printf("copied socket: %d | pointer copied socket: %p\n", socket, &(pt->clientSocket));//&socket);
-        // buca na internet
-        printf("[+] Searching for site\n");
-        //int content_length = http(pt->site, &(pt->clientSocket));//&socket);//, pt->clientSocket);
-
-        // Inclui na hashtable
-        // node = createNodeSynchronized(pt->site, content_length, hashArray);
-
-        // printf("\t=== HTML file available on proxy ===\n");
-        // printf("\t      %s", ctime(&node->creation_time));
-
-        // entrega o site para o  cliente
-        // sendPageToClient(node, send_to_directory, consocket);
-
-
-    }else{
-
-        // entrega o site para o cliente
-        printf("[+] Page on proxy! Sending to client!\n");
-        // sendPageToClient(node, send_to_directory, consocket);
-
-        free(pt->site);
-    }
-
-
-
-    close(pt->clientSocket);
-
-    return (void*) 0;
-
-}
-*/
 void * handleClientConnection( void * ptr ){
 
     bool runClient = true;
@@ -425,7 +341,7 @@ void verifyHashtable( int signum ){
                     strcat(info_file, ".txt");
 
                     node = removeNodeSynchronized(aux, node, i);
-                    // node = remove_Hash_Node(aux, node, i, hashArray);
+
                     char * timeString = ctime( &now );
 
                     removeFile( PROXY_DIRECTORY, file);
@@ -468,7 +384,6 @@ void  closeProxy(int sig){
      getchar(); // Get new line character
 }
 
-
 int main(int argc, char *argv[]){
 
     if( argc != 2 ){
@@ -477,7 +392,7 @@ int main(int argc, char *argv[]){
     }
 
     signal( SIGALRM, verifyHashtable ); // Register signal handler
-    // signal(SIGINT, closeProxy); // Signal to close/exit Proxy server
+    signal(SIGINT, closeProxy); // Signal to close/exit Proxy server
 
     alarm( TIME_INTERVAL ); // Scheduled alarm after 20 seconds
 
@@ -520,16 +435,12 @@ int main(int argc, char *argv[]){
             printf("Client connection failed!\n");
             continue;
         }
-        // else{
-        //    printf("[+] Incoming connection from %s\n", inet_ntoa(dest.sin_addr));
-        // }
 
         ClientArguments_t * pt = (ClientArguments_t *) calloc(1, sizeof(ClientArguments_t));
         pt->clientSocket = consocket;
         pt->port = port;
         pt->serverSocket = serverSocket;
         pt->dest = &dest;
-        // printf("\t=== server socket: %d | client socket: %d | port: %d | destination: %s ===\n", pt->serverSocket, pt->clientSocket, pt->port, inet_ntoa(dest.sin_addr) );
 
         int error_t = pthread_create( &threads[ i ], NULL, &handleClientConnection, (void *)pt );
 
