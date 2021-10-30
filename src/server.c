@@ -50,8 +50,6 @@ void sendPageToClient( LinkedList * node, int consocket ){
 
     // esse trecho aqui pode ser generalizado, porque também é uma parte no http.c
     // aqui eu pego o nome do arquivo que foi salvo na proxy
-
-    // REALMENTE PRECISA ALOCAR MEMÓRIA AQUI? ACHO QUE NÃO
     char * pt = memrchr(str, '/', (int)strlen(str)) + 1;
     char * file_to_send = (char *) calloc ((int)strlen(pt) + 1, sizeof(char) );
     strcpy(file_to_send, pt);
@@ -83,7 +81,7 @@ void sendPageToClient( LinkedList * node, int consocket ){
         if(content_length % number_of_bytes_reads == 0){
             break;
         }
-        // send( consocket, string_line_from_file, (strlen(string_line_from_file))*sizeof(char), 0);
+
         sendString( string_line_from_file, consocket );
         memset(string_line_from_file, 0, N_BYTES_TO_SEND);
 
@@ -107,6 +105,7 @@ LinkedList * searchInHashSynchronized( char * str ){
     pthread_mutex_unlock(&lock);
     return node;
 }
+
 // Wrapper for creating node on hash
 LinkedList * createNodeSynchronized( char * str, int content_length ){
     pthread_mutex_lock(&lock);
@@ -121,6 +120,21 @@ LinkedList * removeNodeSynchronized( LinkedList * aux, LinkedList * node, int in
     pthread_mutex_unlock(&lock);
     return node;
 }
+
+LinkedList * getNodeSynchronized( int index ){
+    pthread_mutex_lock(&lock);
+    LinkedList * node = hashArray[index]->begin;
+    pthread_mutex_unlock(&lock);
+    return node;
+}
+
+Hash * verifyHashSynchronized( int index ){
+    pthread_mutex_lock(&lock);
+    Hash * pt = hashArray[index];
+    pthread_mutex_unlock(&lock);
+    return pt;
+}
+
 
 void * handleClientConnection( void * ptr ){
 
@@ -140,7 +154,6 @@ void * handleClientConnection( void * ptr ){
 
           case LIST_ID:
               printf("[LIST COMMAND]\n");
-              // printHash(hashArray);
 
               int i = 0;
 
@@ -198,9 +211,9 @@ void * handleClientConnection( void * ptr ){
                     printf("[+] %s", ctime(&node->creation_time));
 
                   }else{
-                    printf("[+] Page already on proxy! Sending to client...\n");
+
                     // entrega o site para o  cliente
-                    // sendPageToClient(node, consocket);
+                    printf("[+] Page already on proxy! Sending to client...\n");
 
                     int content_length = node->content_length;
                     char * str = node->site;
@@ -237,10 +250,12 @@ void * handleClientConnection( void * ptr ){
                         number_of_bytes_reads += strlen(string_line_from_file);
 
                         if(content_length % number_of_bytes_reads == 0){
-                            send( consocket, string_line_from_file, (strlen(string_line_from_file))*sizeof(char), 0);
+                            // send( consocket, string_line_from_file, (strlen(string_line_from_file))*sizeof(char), 0);
+                            sendString2( string_line_from_file, (strlen(string_line_from_file))*sizeof(char), consocket );
                             break;
                         }
-                        send( consocket, string_line_from_file, (strlen(string_line_from_file))*sizeof(char), 0);
+                        // send( consocket, string_line_from_file, (strlen(string_line_from_file))*sizeof(char), 0);
+                        sendString2( string_line_from_file, (strlen(string_line_from_file))*sizeof(char), consocket );
                         memset(string_line_from_file, 0, N_BYTES_TO_SEND*sizeof(char));
                     }
 
@@ -268,8 +283,6 @@ void * handleClientConnection( void * ptr ){
 
           case EXIT_ID:
               printf("[EXIT COMMAND]\n");
-              // printf("\t=== Client %d disconnected! ===\n", consocket);
-              // printf("\t=== Server says bye bye to client %d! ===\n", consocket);
               printf("[+] Closing socket %d\n", consocket);
               close(consocket);
               runClient = false;
@@ -321,9 +334,10 @@ void verifyHashtable( int signum ){
 
     while( i < TABLE_SIZE ){
 
-        if( hashArray[i] != NULL ){
 
-            LinkedList * node = hashArray[i]->begin;
+        if( verifyHashSynchronized(i) != NULL ){
+
+            LinkedList * node = getNodeSynchronized(i);
             LinkedList * aux = node;
 
             while( node != NULL ){
@@ -350,8 +364,6 @@ void verifyHashtable( int signum ){
                     printf("\t[file %s removed from proxy!]\n", file);
                     printf("Current time: %s\n", timeString);
 
-                  	//printf("Time difference: %f\n", timeDifference);
-
                     free(file);
                     free(info_file);
 
@@ -373,7 +385,7 @@ void  closeProxy(int sig){
      char  c;
 
      signal(sig, SIG_IGN);
-     printf("OUCH, did you hit Ctrl-C?\n"
+     printf("OUCH, did you hit Ctrl+C?\n"
             "Do you really want to quit? [y/n] ");
      c = getchar();
      if (c == 'y' || c == 'Y')
@@ -386,18 +398,21 @@ void  closeProxy(int sig){
 
 int main(int argc, char *argv[]){
 
-    if( argc != 2 ){
-        printf("USAGE: server port_number\n");
+    if( argc != 3 ){
+        printf("Please verify number of arguments:\n1) Time interval for scheduling alarm\n2) Server port_number\n");
         return EXIT_FAILURE;
     }
 
     signal( SIGALRM, verifyHashtable ); // Register signal handler
     signal(SIGINT, closeProxy); // Signal to close/exit Proxy server
 
-    alarm( TIME_INTERVAL ); // Scheduled alarm after 20 seconds
+    float time_interval = atof( argv[ 1 ] );
+    // printf("alarm: %lf\n", time_interval);
+    // alarm( TIME_INTERVAL ); // Scheduled alarm
+    alarm(time_interval);
 
     struct sockaddr_in serv; // srtuct info about server
-    int port = atoi( argv[ 1 ] );
+    int port = atoi( argv[ 2 ] );
     int serverSocket = serverConection( port, serv );
 
     if(serverSocket == COMMUNICATION_ERROR){
@@ -410,8 +425,8 @@ int main(int argc, char *argv[]){
     pthread_t threads[ NUM_THREADS ];
 
     if ( pthread_mutex_init(&lock, NULL) != 0){
-      printf("Mutex init failed\n");
-      return EXIT_FAILURE;
+        printf("Mutex init failed\n");
+        return EXIT_FAILURE;
     }
     // Array to store pointers after memory allocation (for freeing memory in the end)
     ClientArguments_t * processClient[ NUM_THREADS ];
@@ -424,7 +439,6 @@ int main(int argc, char *argv[]){
 
         struct sockaddr_in dest; // socket info about the machine connecting to us
         int consocket = accept(serverSocket, (struct sockaddr *)&dest, &socksize);
-        //int consocket = acceptConnectionSocket( serverSocket, dest );
 
         if(consocket == COMMUNICATION_ERROR){
 
@@ -450,11 +464,9 @@ int main(int argc, char *argv[]){
             continue;
         }
         processClient[ i ] = pt;
-
         i++;
 
     }
-
 
     for( int j = 0; j < i; j++ ){
 
@@ -465,10 +477,7 @@ int main(int argc, char *argv[]){
             printf("Error on thread_id %ld!\n", threads[ j ]);
         }
         free(processClient[ j ]);
-        //printf(">> %p\n", returnValue);
     }
-
-    // pthread_exit(NULL);
 
     pthread_mutex_destroy(&lock);
     removeHash(hashArray);

@@ -161,8 +161,8 @@ void * search_function_multithread( void * ptr ){
     while(1){
 
         // int bytes = recvString2(page_recv, mysocket);
-        int bytes = recv( pt->clientSocket, page_recv, N_BYTES_TO_RECV*sizeof(char), 0);
-        // int bytes = recvString2(page_recv, pt->clientSocket);
+        // int bytes = recv( pt->clientSocket, page_recv, N_BYTES_TO_RECV*sizeof(char), 0);
+        int bytes = recvString2(page_recv, pt->clientSocket);
 
         fputs(page_recv, p);
 

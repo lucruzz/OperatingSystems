@@ -29,21 +29,40 @@ int hashFunction( char * site ){
     return (sum + n) % 10;
 }
 
+LinkedList * searchInHash( char * site , Hash ** hashArray ){
+
+    int indexHash = hashFunction(site);
+
+    if( hashArray[indexHash] == NULL ){
+        return NULL;
+    }
+
+    LinkedList * node = hashArray[indexHash]->begin;
+
+    while( node != NULL ){
+
+        if( !strcmp(node->site, site) ){
+            return node;
+        }
+        node = node->next;
+    }
+    return NULL;
+}
+
 LinkedList * createNode( char * site, int content_length, Hash ** hashArray ){
 
-    LinkedList * newnode = (LinkedList *) calloc(1, sizeof(LinkedList));
+    LinkedList * newnode = searchInHash(site, hashArray);
+
+    if( newnode != NULL ){return newnode;}
+
+    // LinkedList * newnode = (LinkedList *) calloc(1, sizeof(LinkedList));
+    newnode = (LinkedList *) calloc(1, sizeof(LinkedList));
 
     newnode->site = site;
     newnode->content_length = content_length;
     newnode->creation_time = time( NULL );
 
     int index = hashFunction(site);
-
-    // if( hashArray[index]->begin != NULL ){
-    //     newnode->next = hashArray[index]->begin;
-    // }
-    // hashArray[index]->begin = newnode;
-    // hashArray[index]->n_elements += 1;
 
     if( hashArray[index] == NULL ){
         Hash * nodeBegin = (Hash *) calloc(1, sizeof(Hash));
@@ -58,8 +77,6 @@ LinkedList * createNode( char * site, int content_length, Hash ** hashArray ){
 
     return newnode;
 }
-
-
 
 void printHash( Hash ** hashArray ){
 
@@ -80,28 +97,6 @@ void printHash( Hash ** hashArray ){
       i++;
 
     }
-}
-
-
-LinkedList * searchInHash( char * site , Hash ** hashArray ){
-
-    int indexHash = hashFunction(site);
-
-    // LinkedList * node = hashArray[indexHash].begin;
-    if( hashArray[indexHash] == NULL ){
-        return NULL;
-    }
-
-    LinkedList * node = hashArray[indexHash]->begin;
-
-    while( node != NULL ){
-
-        if( !strcmp(node->site, site) ){
-            return node;
-        }
-        node = node->next;
-    }
-    return NULL;
 }
 
 void removeHash( Hash ** hashArray ){

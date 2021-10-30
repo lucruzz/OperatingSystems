@@ -18,8 +18,7 @@ List * createList(){
 void insertArg(char * StringArgument, List * listStructure){
 
     Node * newnode = (Node *) calloc(1, sizeof(Node));
-    // newnode->argument = (char *) calloc(LIST_MAX_LINE_SIZE, sizeof(char));
-    // strcpy(newnode->argument, StringArgument);
+
     newnode->argument = StringArgument;
 
     if(listStructure->begin == NULL){

@@ -89,7 +89,7 @@ int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
     struct sockaddr * destinationSocket = result->ai_addr;
 
     int connection_socket = socket( result->ai_family, result->ai_protocol, 0);
-    //printf("%d\n", connection_socket);
+
     if (connection_socket == ERROR){
         perror("Socket error");
         exit(EXIT_FAILURE);
@@ -110,7 +110,7 @@ int conncetionWebsiteSocket( char * url, struct addrinfo * result ){
     strcat(request, url);
     strcat(request, " HTTP/1.0\r\nAccept: text/plain, text/html, text/*\r\n\r\n");
 
-    int number_of_bytes = strlen( request );//* sizeof( char );
+    int number_of_bytes = strlen( request );
 
     puts("\tSending request...");
     send( connection_socket, request, number_of_bytes, 0 );
@@ -158,13 +158,13 @@ char * getHTMLinformation( char * url, int connection_socket ){
             *( page_info + index - 2 ) == '\r' && *( page_info + index - 1 ) == '\n' ){
 
                 *( page_info + index ) = '\0';
-                //fprintf (pFile, "%c", *info_char);
+
                 break;
 
         }
 
     }
-    //printf("%s\n", page_info);
+
     fprintf (pFile, "%s", page_info);
 
     fclose (pFile);
