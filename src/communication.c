@@ -34,27 +34,23 @@ double recvDouble( int socket ){
 }
 
 void sendString( char * string, int socket ){
-    int len_str =  strlen(string) + 1; // +1 para o '\0'
+    int len_str =  (int)strlen(string);
     sendInt(len_str, socket);
-    send(socket, string, sizeof(char)*len_str, 0);
+    send(socket, string, sizeof(char)*(len_str + 1), 0); // +1 para o '\0'
 }
 
-void sendString2( char * string, int socket ){
-    int len_str = strlen(string);
-    sendInt(len_str, socket);
-    send(socket, string, sizeof(char)*len_str, 0);
+void sendString2( char * string, int bytes, int socket ){
+    send(socket, string, sizeof(char)*bytes, 0);
 }
 
 char * recvString( int socket ){
-    int len_str = 0;
-    len_str = recvInt(socket);
-    char * string = (char *) calloc(len_str, sizeof(char)*len_str);
-    recv(socket, string, len_str, 0);
+    int len_str = recvInt(socket);
+    char * string = (char *) calloc(len_str + 1, sizeof(char));
+    recv(socket, string, sizeof(char)*(len_str + 1), 0);
     return string;
 }
 
 int recvString2( char * string, int socket ){
-    int len_str = 0;
-    len_str = recvInt(socket);
-    return recv(socket, string, len_str, 0);
+    int bytes = recv(socket, string, sizeof(char)*N_BYTES_TO_RECV, 0);
+    return bytes;
 }

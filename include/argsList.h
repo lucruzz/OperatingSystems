@@ -11,13 +11,13 @@
 
 typedef struct List{
     int n_elements;
-    struct Node *begin;
-    struct Node *end;
+    struct Node * begin;
+    struct Node * end;
 }List;
 
 typedef struct Node{
-    char *argument;
-    struct Node *next;
+    char * argument;
+    struct Node * next;
 }Node;
 
 List * createList();

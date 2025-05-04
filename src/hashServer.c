@@ -29,7 +29,9 @@ int hashFunction( char * site ){
 LinkedList * createNode( char * site, int content_length, Hash hashArray[] ){
 
     LinkedList * newnode = (LinkedList *) calloc(1, sizeof(LinkedList));
+    printf("--> %s\n", site);
     newnode->site = site;
+    printf("--> %s\n", newnode->site);
     newnode->content_length = content_length;
     newnode->creation_time = time( NULL );
 

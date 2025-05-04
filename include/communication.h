@@ -27,6 +27,9 @@
 
 #define COMMUNICATION_ERROR -1
 
+#define NODE_NOT_FOUND 0
+#define NODE_FOUND 1
+
 void sendInt( int intNumber, int socket );
 int recvInt( int socket );
 
@@ -34,9 +37,8 @@ void sendDouble( double doubleNumber, int socket );
 double recvDouble( int socket );
 
 void sendString( char* string, int socket );
-void sendString2( char* string, int socket );
+void sendString2( char* string, int bytes, int socket );
 char * recvString( int socket );
-
 // Essa função recvString2 ela não aloca memória
 // Útil para usar no recebimento das mensagens pelo cliente
 int recvString2( char *, int );

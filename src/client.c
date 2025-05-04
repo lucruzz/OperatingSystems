@@ -9,7 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <stdbool.h>
+#include <semaphore.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -24,11 +26,66 @@
 #define MAX_LINE_READ_COMMAND_SIZE 1000
 #define MAX_LINE_PATH_SHARED_FOLDER 20
 
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
 typedef struct ClientInformation{
-    int socket;
+    struct sockaddr_in * serv_dest;
+    char * directory;
+    char * str_aux;
+    int clientSocket;
     int port;
-    char * shared_directory;
 }ClientInformation;
+
+typedef struct SearchInformation_t{
+    struct sockaddr_in * serv_dest;
+    struct sockaddr_in t;
+    char * directory;
+    char * site;
+    int clientSocket;
+    int port;
+    int tid;
+}SearchInformation_t;
+
+
+int clientConnection2( struct sockaddr_in serv_dest ){
+
+    int mysocket = socket(AF_INET, SOCK_STREAM, 0);
+
+    if( mysocket == COMMUNICATION_ERROR ){
+        perror("[SOCKET CREATION ERROR]:");
+        return COMMUNICATION_ERROR;
+    }
+
+    int connectResult = connect(mysocket, (struct sockaddr *)&serv_dest, sizeof(struct sockaddr_in));
+
+    //printf("Incoming connections from %s\n", inet_ntoa(serv_dest.sin_addr));
+
+    if( connectResult == COMMUNICATION_ERROR ){
+        printf("CLIENT ERROR: %s\n", strerror(errno));
+        return COMMUNICATION_ERROR;
+    }
+
+    return mysocket;
+}
+
+int clientConnection( int port, struct sockaddr_in serv_dest ){
+
+    int mysocket = socket(AF_INET, SOCK_STREAM, 0);
+
+    memset(&serv_dest, 0, sizeof(serv_dest));               // zero the struct
+    serv_dest.sin_family = AF_INET;
+    serv_dest.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // set destination IP number - localhost, 127.0.0.1
+    serv_dest.sin_port = htons( port );   // set destination port number
+
+    int connectResult = connect(mysocket, (struct sockaddr *)&serv_dest, sizeof(struct sockaddr_in));
+
+    if( connectResult == COMMUNICATION_ERROR ){
+        printf("CLIENT ERROR: %s\n", strerror(errno));
+        return COMMUNICATION_ERROR;
+    }
+
+    return mysocket;
+}
 
 List * determineArguments(char * commandArgs){
 
@@ -46,86 +103,211 @@ List * determineArguments(char * commandArgs){
     return commandList;
 }
 
+Node * createListOfPointers( Node * lista [], List * command_list ){
+
+    Node * pt = command_list->begin;
+    int n = command_list->n_elements;
+
+    for( int i = 0; i < n; i++ ){
+        lista[ i ] = pt;
+        pt = pt->next;
+    }
+
+    return * lista;
+}
+
+void * search_function_multithread( void * ptr ){
+
+    SearchInformation_t * pt = (SearchInformation_t *) ptr;
+
+    int sendSocket = socket(AF_INET, SOCK_STREAM, 0);
+    pt->clientSocket = sendSocket;
+    int connectResult = connect(pt->clientSocket, (struct sockaddr *)&(pt->t), sizeof(struct sockaddr_in));
+
+    // Envio o sinal do commando para a nova thread
+    sendInt(SEARCH_ID, pt->clientSocket);
+
+    // Envio o sinal do commando para a nova thread
+    sendInt(1, pt->clientSocket);
+
+    // Envio o site a ser procurado
+    sendString(pt->site, pt->clientSocket);
+
+    int content_length = recvInt(pt->clientSocket);
+    printf("[+] Content-Length: %d\n", content_length);
+
+    char * filename = recvString(pt->clientSocket);
+    printf("[+] Filename: %s\n", filename);
+
+    int total_full_length_to_file = strlen(pt->directory) + strlen(filename);
+    // Aloco uma string com o tamanho total do caminho para o arquivo
+    char * full_path_file = ( char * ) calloc(total_full_length_to_file + 2, sizeof(char));
+    strcat(full_path_file, pt->directory);
+    strcat(full_path_file, "/");
+    strcat(full_path_file, filename);
+    printf("[+] Path to file: %s\n", full_path_file);
+
+    // Abro o arquivo para armazenar a página "no lado" cliente
+    FILE * p = fopen(full_path_file, "w");
+
+    free(filename);
+    free(full_path_file);
+
+    // Aloco memória para receber os bytes da proxy
+    char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
+
+    int bytes_recv = 0;
+
+    while(1){
+
+        // int bytes = recvString2(page_recv, mysocket);
+        // int bytes = recv( pt->clientSocket, page_recv, N_BYTES_TO_RECV*sizeof(char), 0);
+        int bytes = recvString2(page_recv, pt->clientSocket);
+
+        fputs(page_recv, p);
+
+        bytes_recv += bytes;
+
+        if( bytes_recv % content_length == 0){
+            break;
+        }
+
+        memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
+    }
+
+    free(page_recv);
+    fclose(p);
+    printf("\t=== Page received from proxy! ===\n");
+
+    // Envio um sinal para fechar o socket
+    sendInt(EXIT_ID, pt->clientSocket);
+
+    close(pt->clientSocket);
+
+    return (void *) 0;
+}
+
 // Busca n sites
-void search(char *command, char *shared_directory, int mysocket){
+void search(char *command, ClientInformation * ptr){
 
     puts("> Search");
 
+    int mysocket = ptr->clientSocket;
+    char * directory = ptr->directory;
+    struct sockaddr_in serv_dest = *(ptr->serv_dest);
+
+    // Cria uma lista encadeada com os argumentos (sites/urls) do comando
     List * commandList = determineArguments(command);
 
+    // Armazeno o número de argumentos processados no comando search
     int n = commandList->n_elements;
+
     // Envia o número de argumentos (sites)
     sendInt(n, mysocket);
 
-    // Envia o diretório compartilhado a que deseja receber os dados
-    sendString(shared_directory, mysocket);
+    // Se o número de sites que o cliente pediu para processar for 1
+    // Eu não quero/preciso abrir uma thread eu posso executar na própria thread
+    if( n == 1 ){
+        // Envio o site a ser procurado
+        sendString((commandList->begin)->argument, ptr->clientSocket);
 
-    if(n){
-        Node * aux = commandList->begin;
+        int content_length = recvInt(ptr->clientSocket);
+        printf("[+] Content-Length: %d\n", content_length);
 
-        // Pego o tamanho do caminho do diretório
-        int length_str_shared_directory = strlen(shared_directory);
+        char * filename = recvString(ptr->clientSocket);
+        printf("[+] Filename: %s\n", filename);
 
-        for( int i = 0; i < n; i++ ){
-            // Envia o argumento (site) para o Servidor
-            sendString(aux->argument, mysocket);
+        int total_full_length_to_file = strlen(ptr->directory) + strlen(filename);
 
-            // Recebo a quantidade de bytes da página a ser recebida
-            int n_bytes_to_recv = recvInt(mysocket);
-            printf("\t=== Content-Length: %d ===\n", n_bytes_to_recv);
+        // Aloco uma string com o tamanho total do caminho para o arquivo
+        char * full_path_file = ( char * ) calloc(total_full_length_to_file + 2, sizeof(char));
+        strcat(full_path_file, ptr->directory);
+        strcat(full_path_file, "/");
+        strcat(full_path_file, filename);
+        printf("[+] Path to file: %s\n", full_path_file);
 
-            // Recebo o nome da paǵina
-            char * page_filename = recvString(mysocket);
-            // Pego o tamanho do nome da página
-            int length_str_page_filename = strlen(page_filename);
+        // Abro o arquivo para armazenar a página "no lado" cliente
+        FILE * p = fopen(full_path_file, "w");
 
-            int total_full_length_to_file = length_str_shared_directory + length_str_page_filename;
+        free(filename);
+        free(full_path_file);
 
-            // Aloco uma string para o tamanho total para o arquivo "no lado do" cliente
-            char * full_path_file = ( char * ) calloc(total_full_length_to_file + 2, sizeof(char));
-            strcat(full_path_file, shared_directory);
-            strcat(full_path_file, "/");
-            strcat(full_path_file, page_filename);
+        // Aloco memória para receber os bytes da proxy
+        char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
 
-            // Abro o arquivo para armazenar a página "no lado" cliente
-            FILE * p = fopen(full_path_file, "w");
+        int bytes_recv = 0;
 
-            free(page_filename);
-            free(full_path_file);
+        while(1){
 
-            char * page_recv = (char *) calloc(N_BYTES_TO_RECV + 1, sizeof(char));
+            // int bytes = recv( ptr->clientSocket, page_recv, N_BYTES_TO_RECV*sizeof(char), 0);
+            int bytes = recvString2(page_recv, ptr->clientSocket);
 
-            int bytes_recv = 0;
+            fputs(page_recv, p);
 
-            while(1){
+            bytes_recv += bytes;
 
-                  int bytes = recvString2(page_recv, mysocket);
-
-                  fputs(page_recv, p);
-
-
-                  bytes_recv += bytes;
-
-                  if(bytes % N_BYTES_TO_RECV != 0)
-                      break;
-
-                  if( bytes_recv % n_bytes_to_recv == 0){
-                      break;
-                  }
-
-                  memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
+            if( bytes_recv % content_length == 0){
+                printf("bytes reads> %d\n", bytes_recv);
+                break;
             }
-            free(page_recv);
-            fclose(p);
-            printf("\t=== Page received from proxy! ===\n");
 
-            aux = aux->next;
+            memset(page_recv, 0, N_BYTES_TO_RECV*sizeof(char));
         }
-        free(aux);
+
+        free(page_recv);
+        fclose(p);
+        printf("\t=== Page received from proxy! ===\n");
+
+    }else if(n > 1){
+        // Cria uma estrutura para armazenar os threads_ids de acordo com o número de sites
+        pthread_t search_t[ n ];
+
+        // Envia o diretório compartilhado a que deseja receber os dados
+        // sendString(directory, mysocket);
+
+        // Armazeno em um ponteiro auxiliar o início da lista de argumentos
+        //Node * aux = commandList->begin;
+        Node * list_ptr[ n ];
+      	createListOfPointers( list_ptr, commandList );
+        SearchInformation_t searchArgs_t[ n ];
+
+        memset(&searchArgs_t, 0, n*sizeof(SearchInformation_t));
+        for ( int i = 0; i < n; i++ ){
+
+            // int sendSocket = socket(AF_INET, SOCK_STREAM, 0);
+            // searchArgs_t[ i ].clientSocket = sendSocket;
+            searchArgs_t[ i ].directory = ptr->directory;
+            searchArgs_t[ i ].site = list_ptr[ i ]->argument;
+            searchArgs_t[ i ].serv_dest = (ptr->serv_dest);
+            searchArgs_t[ i ].t = *(ptr->serv_dest);
+            searchArgs_t[ i ].tid = i;
+
+            int error_t = pthread_create( &search_t[ i ], NULL, &search_function_multithread, &searchArgs_t[ i ] );
+
+            if(error_t){
+                printf("\t=== Sorry! The thread could not be created! ===\n");
+                continue;
+            }
+        }
+
+        void * retVal = NULL;
+
+        for( int j = 0; j < n; j++ ){
+
+            int success = pthread_join( search_t[ j ], retVal );
+            if(success != 0){
+                printf("Error on thread_id %ld!\n", search_t[ j ]);
+            }
+
+        }
+
+        //free(aux);
         removeList(commandList);
 
+        // Executes search_function_single_thread();
+
     }else{
-        printf("No arguments to search command!\n");
+        printf("\t==== No arguments to search command! ===\n");
     }
 }
 
@@ -135,16 +317,20 @@ void list( int mysocket ){
     puts("> List");
 
     int j = 0;
+    printf("[+] Sites availables on proxy:\n");
     while ( j < TABLE_SIZE ){
 
         int n = recvInt(mysocket);
 
         if( n != 0 ){
             char * site;
+            char * time;
             for (int i = 1; i <= n; i++ ){
               site = recvString(mysocket);
-              printf("[%d] (%d) %s\n", j, i, site);
+              time = recvString(mysocket);
+              printf("\tHashtable[%d](%d) %s | Creation time: %s\n", j, i, site, time);
               free(site);
+              free(time);
             }
         }
         j++;
@@ -158,7 +344,9 @@ void exit_( int * run, ShellCommands * history ){
     puts("Client says bye bye!");
 }
 
-int processCommand(char * command, int * run, ShellCommands * history, int mysocket, char * shared_directory ){
+int processCommand(char * command, int * run, ShellCommands * history, ClientInformation * pt ){
+
+    int mysocket = pt->clientSocket;
 
     char * strings = strtok(command, " ");
 
@@ -167,7 +355,7 @@ int processCommand(char * command, int * run, ShellCommands * history, int mysoc
     if( !strcmp( strings, SEARCH ) ){
         command_id = SEARCH_ID;
         sendInt(command_id, mysocket); // Envia o ID do comando a ser processado
-        search(strings, shared_directory, mysocket);
+        search(strings, pt);
 
     }else if( !strcmp( strings, LIST ) ){
         command_id = LIST_ID;
@@ -205,27 +393,6 @@ void * readCommand( ShellCommands * history ){
     return command;
 }
 
-int clientConnection( int port ){
-
-    int mysocket;
-    struct sockaddr_in dest;
-
-    mysocket = socket(AF_INET, SOCK_STREAM, 0);
-
-    memset(&dest, 0, sizeof(dest));               // zero the struct
-    dest.sin_family = AF_INET;
-    dest.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // set destination IP number - localhost, 127.0.0.1
-    dest.sin_port = htons( port );   // set destination port number
-
-    int connectResult = connect(mysocket, (struct sockaddr *)&dest, sizeof(struct sockaddr_in));
-
-    if( connectResult == COMMUNICATION_ERROR ){
-        printf("CLIENT ERROR: %s\n", strerror(errno));
-        return COMMUNICATION_ERROR;
-    }
-
-    return mysocket;
-}
 
 int main( int argc, char *argv[] ){
 
@@ -235,33 +402,50 @@ int main( int argc, char *argv[] ){
     }
 
     int port = atoi( argv[ 2 ] );
+    struct sockaddr_in serv_dest;
 
-    char * shared_directory = ( char * ) calloc ( MAX_LINE_PATH_SHARED_FOLDER, sizeof(char) );
-    strcpy( shared_directory, argv[ 1 ] );
+    memset(&serv_dest, 0, sizeof(serv_dest));               // zero the struct
+    serv_dest.sin_family = AF_INET;
+    serv_dest.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // set destination IP number - localhost, 127.0.0.1
+    serv_dest.sin_port = htons( port );   // set destination port number
 
+    int mysocket = clientConnection2(serv_dest);
+
+    if(mysocket == COMMUNICATION_ERROR){
+        return COMMUNICATION_ERROR;
+    }
+
+    char * directory = argv[ 1 ];
     char * command;
     int run = TRUE;
     ShellCommands * history = createHistory();
-    int mysocket = clientConnection(port);
 
-    printf("[ PORTA ] %d\n[ SHARED DIRECTORY ] %s\n[ CLIENT SOCKET ] %d\n", port, shared_directory, mysocket);
+    ClientInformation * pt = (ClientInformation *) calloc( 1, sizeof(ClientInformation) );
+    pt->port = port;
+    pt->directory = directory;
+    pt->clientSocket = mysocket;
+    pt->serv_dest = &serv_dest;
 
-    if(mysocket == COMMUNICATION_ERROR){
-        free(history);
-        return COMMUNICATION_ERROR;
+    if ( pthread_mutex_init(&lock, NULL) != 0){
+      printf("Mutex init failed\n");
+      return EXIT_FAILURE;
     }
+
+    printf("[+] You are connected to %s!\n", inet_ntoa((pt->serv_dest)->sin_addr));
 
     while(run){
 
         command = readCommand(history);
 
-        int command_id = processCommand(command, &run, history, mysocket, shared_directory);
+        int command_id = processCommand(command, &run, history, pt);
 
         free(command);
 
     }
 
+    pthread_mutex_destroy(&lock);
     close(mysocket);
-    free(shared_directory);
+    // free(directory);
+    free(pt);
     return EXIT_SUCCESS;
 }
